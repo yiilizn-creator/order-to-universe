@@ -87,7 +87,7 @@ export function getStoppedRotation(faceIndex) {
   return rotations[faceIndex] || rotations[0];
 }
 
-export function renderDiceCluster(container, { count = 3, size = "sm", floating = true } = {}) {
+export function renderDiceCluster(container, { count = 6, size = "sm", floating = true } = {}) {
   container.innerHTML = "";
   DICE_SETS.slice(0, count).forEach((set, i) => {
     container.appendChild(createDiceElement(set, { size, floating, delay: i * 0.4 }));
