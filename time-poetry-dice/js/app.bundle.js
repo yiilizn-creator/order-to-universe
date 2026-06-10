@@ -46,24 +46,18 @@ function incrementRollCount() {
 
 /* === poem.js === */
 const BEST_TEMPLATES = [
-  ({ color, nature, action, object, emotion }) => {
-    const subject = object === "小猫" ? "小猫" : `那只${object}`;
-    return `${color}${nature}${action}${object}，\n${emotion}的${subject}终于抬起头。`;
-  },
-  ({ color, nature, action, object, time }) =>
-    `${color}${nature}${action}${object}，\n${time}的故事刚刚开始。`,
-  ({ nature, action, color, object, emotion }) =>
-    `${nature}${action}过${color}的${object}，\n${emotion}在角落里发芽。`,
+  ({ nature, action, object, emotion }) =>
+    `${nature}${action}${object}\n${emotion}终于被看见`,
+  ({ color, nature, action, object, emotion }) =>
+    `${color}${nature}${action}${object}\n${emotion}终于被看见`,
+  ({ nature, action, object, emotion, time }) =>
+    `${nature}${action}${object}\n${emotion}在${time}醒来`,
+  ({ color, nature, object, action, emotion }) =>
+    `${color}${nature}停在${object}\n${action}之后是${emotion}`,
+  ({ nature, action, object, emotion }) =>
+    `${nature}悄悄${action}\n${object}记住了${emotion}`,
   ({ color, object, nature, action, emotion }) =>
-    `${color}${object}里，\n${nature}轻轻${action}，${emotion}有了名字。`,
-  ({ time, nature, color, action, object }) =>
-    `${time}的${color}${nature}，\n${action}向${object}，像一句玩笑话。`,
-  ({ emotion, nature, object, action, color }) =>
-    `把${emotion}交给${nature}，\n${action}过${color}的${object}。`,
-  ({ color, nature, object, action, time }) =>
-    `${color}${nature}停在${object}旁，\n${time}悄悄${action}。`,
-  ({ nature, color, action, emotion, object }) =>
-    `${nature}和${color}打了个照面，\n${action}之后，${emotion}住进了${object}。`,
+    `${color}${object}里\n${nature}${action}，${emotion}很轻`,
 ];
 
 function countChars(text) {
@@ -88,28 +82,22 @@ function generateBestPoem(wordMap) {
   for (const tpl of shuffled) {
     const poem = tpl(vars).trim();
     const len = countChars(poem);
-    if (len >= 18 && len <= 36) return poem;
+    if (len >= 14 && len <= 32) return poem;
   }
 
-  return `${vars.color}${vars.nature}${vars.action}${vars.object}，\n${vars.emotion}的${vars.object}终于抬起头。`;
+  return `${vars.nature}${vars.action}${vars.object}\n${vars.emotion}终于被看见`;
 }
 
 function getBestOrder(wordMap, rolledWords) {
   const v = varsFromMap(wordMap);
-  const ordered = [v.color, v.nature, v.action, v.object, v.emotion, v.time].filter(Boolean);
+  const ordered = [v.nature, v.action, v.object, v.color, v.emotion, v.time].filter(Boolean);
   const unique = [...new Set(ordered)];
   const rest = rolledWords.filter((w) => !unique.includes(w));
   return [...unique, ...rest].slice(0, 6);
 }
 
-function composeCustomPoem(words) {
-  if (!words.length) return "";
-  const mid = Math.ceil(words.length / 2);
-  return `${words.slice(0, mid).join("")}\n${words.slice(mid).join("")}`;
-}
-
-function getShareCopy(words, bestPoem) {
-  return `时间的诗\n\n我掷出了这组词：\n${words.join("｜")}\n\n它们最终组成：\n${bestPoem.replace(/\n/g, "")}\n\n你也来试试，看看你的词语会怎么排列`;
+function getShareCopy(bestPoem) {
+  return `${bestPoem.replace(/\n/g, "\n")}\n\n—— 时间的诗\n随机六个词，组成一句话`;
 }
 
 /* === drag.js === */
@@ -123,32 +111,32 @@ function initDiceDrag(container, rolledItems, createItemEl, onChange) {
       const el = createItemEl(item);
       el.draggable = true;
       el.dataset.index = String(index);
-      el.classList.add("dice-wrap--draggable");
+      el.classList.add("dice-tile--draggable");
 
       el.addEventListener("dragstart", (e) => {
         dragUsed = true;
-        el.classList.add("dice-wrap--dragging");
+        el.classList.add("dice-tile--dragging");
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", String(index));
       });
 
       el.addEventListener("dragend", () => {
-        el.classList.remove("dice-wrap--dragging");
+        el.classList.remove("dice-tile--dragging");
       });
 
       el.addEventListener("dragover", (e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
-        el.classList.add("dice-wrap--over");
+        el.classList.add("dice-tile--over");
       });
 
       el.addEventListener("dragleave", () => {
-        el.classList.remove("dice-wrap--over");
+        el.classList.remove("dice-tile--over");
       });
 
       el.addEventListener("drop", (e) => {
         e.preventDefault();
-        el.classList.remove("dice-wrap--over");
+        el.classList.remove("dice-tile--over");
         const from = Number(e.dataTransfer.getData("text/plain"));
         const to = Number(el.dataset.index);
         if (from === to) return;
@@ -206,55 +194,30 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
       cy += lineHeight;
     }
   });
-  return cy;
 }
 
-function renderPoster(canvas, { words, bestPoem, siteUrl }) {
+function renderPoster(canvas, { bestPoem }) {
   canvas.width = POSTER_W;
   canvas.height = POSTER_H;
   const ctx = canvas.getContext("2d");
   const w = POSTER_W;
   const h = POSTER_H;
 
-  ctx.fillStyle = "#FAFAFA";
-  ctx.fillRect(0, 0, w, h);
-
-  const glow = ctx.createRadialGradient(w * 0.5, h * 0.3, 0, w * 0.5, h * 0.3, w * 0.55);
-  glow.addColorStop(0, "rgba(217,242,255,0.5)");
-  glow.addColorStop(1, "transparent");
-  ctx.fillStyle = glow;
+  ctx.fillStyle = "#FAF8F6";
   ctx.fillRect(0, 0, w, h);
 
   ctx.textAlign = "center";
-  ctx.font = "500 56px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "#1e293b";
-  ctx.fillText("时间的诗", w / 2, 200);
+  ctx.font = "500 48px 'PingFang SC', 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "#111111";
+  ctx.fillText("时间的诗", w / 2, 220);
 
-  ctx.font = "300 32px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(30,41,59,0.55)";
-  ctx.fillText("我掷出了这组词：", w / 2, 320);
+  ctx.font = "500 72px 'PingFang SC', 'Noto Sans SC', sans-serif";
+  wrapText(ctx, bestPoem, 140, h * 0.4, w - 280, 108);
 
-  ctx.font = "400 36px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "#1e293b";
-  ctx.fillText(words.join("｜"), w / 2, 400);
-
-  ctx.font = "300 32px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(30,41,59,0.55)";
-  ctx.fillText("它们最终组成：", w / 2, 520);
-
-  ctx.font = "400 52px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "#1e293b";
-  wrapText(ctx, bestPoem, 120, 620, w - 240, 84);
-
-  ctx.font = "300 34px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(30,41,59,0.45)";
-  ctx.fillText("你也来试试", w / 2, h - 280);
-  ctx.fillText("看看你的词语会怎么排列", w / 2, h - 220);
-
-  ctx.font = "300 24px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(30,41,59,0.3)";
-  const url = (siteUrl || window.location.href).replace(/^https?:\/\//, "");
-  ctx.fillText(url, w / 2, h - 80);
+  ctx.font = "400 36px 'PingFang SC', 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "#777777";
+  ctx.fillText("随机六个词", w / 2, h - 220);
+  ctx.fillText("组成一句话", w / 2, h - 160);
 
   return canvas;
 }
@@ -282,15 +245,6 @@ const DICE_SETS = [
   { id: "action", label: "动作", words: ["流过", "经过", "停留", "闪烁", "坠落", "消失"] },
 ];
 
-const FACE_TRANSFORMS = [
-  "rotateY(0deg) translateZ(var(--half))",
-  "rotateY(90deg) translateZ(var(--half))",
-  "rotateY(180deg) translateZ(var(--half))",
-  "rotateY(-90deg) translateZ(var(--half))",
-  "rotateX(90deg) translateZ(var(--half))",
-  "rotateX(-90deg) translateZ(var(--half))",
-];
-
 const ROLL_DURATION = 2500;
 
 function rollDice() {
@@ -313,139 +267,118 @@ function wordsToMap(rolled) {
   return map;
 }
 
-function createFace(word, index) {
-  const face = document.createElement("div");
-  face.className = "dice-face";
-  face.style.transform = FACE_TRANSFORMS[index];
-  face.textContent = word;
-  return face;
-}
+function createDiceTile(set, options = {}) {
+  const {
+    size = "md",
+    word = "…",
+    floating = false,
+    delay = 0,
+    stagger = false,
+  } = options;
 
-function createDiceElement(set, options = {}) {
-  const { size = "md", word = null, faceIndex = 0, floating = false, delay = 0 } = options;
-
-  const wrap = document.createElement("div");
-  wrap.className = `dice-wrap dice-wrap--${size}`;
+  const tile = document.createElement("div");
+  tile.className = `dice-tile dice-tile--${size}`;
   if (floating) {
-    wrap.classList.add("dice-wrap--float");
-    wrap.style.animationDelay = `${delay}s`;
+    tile.classList.add("dice-tile--float");
+    tile.style.animationDelay = `${delay}s`;
   }
-  wrap.dataset.setId = set.id;
-
-  const cube = document.createElement("div");
-  cube.className = "dice-cube";
-  cube.setAttribute("role", "img");
-  cube.setAttribute("aria-label", `${set.label}骰子`);
-
-  set.words.forEach((w, i) => {
-    cube.appendChild(createFace(w, i));
-  });
-
-  if (word !== null) {
-    cube.dataset.face = String(faceIndex);
-    cube.style.transform = getStoppedRotation(faceIndex);
+  if (stagger) {
+    tile.classList.add("dice-tile--stagger");
+    tile.style.animationDelay = `${delay}ms`;
   }
+  tile.dataset.setId = set.id;
 
-  wrap.appendChild(cube);
-  return wrap;
+  const body = document.createElement("div");
+  body.className = "dice-tile__body";
+
+  const edgeTop = document.createElement("div");
+  edgeTop.className = "dice-tile__edge dice-tile__edge--top";
+  edgeTop.setAttribute("aria-hidden", "true");
+
+  const edgeLeft = document.createElement("div");
+  edgeLeft.className = "dice-tile__edge dice-tile__edge--left";
+  edgeLeft.setAttribute("aria-hidden", "true");
+
+  const front = document.createElement("div");
+  front.className = "dice-tile__front";
+  front.textContent = word;
+
+  body.appendChild(edgeTop);
+  body.appendChild(edgeLeft);
+  body.appendChild(front);
+  tile.appendChild(body);
+  tile.setAttribute("role", "img");
+  tile.setAttribute("aria-label", `${set.label}：${word}`);
+  return tile;
 }
 
-function getStoppedRotation(faceIndex) {
-  const rotations = [
-    "rotateX(-12deg) rotateY(18deg)",
-    "rotateX(-12deg) rotateY(-72deg)",
-    "rotateX(-12deg) rotateY(-162deg)",
-    "rotateX(-12deg) rotateY(108deg)",
-    "rotateX(-102deg) rotateY(18deg)",
-    "rotateX(78deg) rotateY(18deg)",
-  ];
-  return rotations[faceIndex] || rotations[0];
+function setTileWord(tile, word) {
+  const front = tile.querySelector(".dice-tile__front");
+  if (front) front.textContent = word;
+  tile.setAttribute("aria-label", word);
 }
 
-function renderDiceCluster(container, { count = 6, size = "sm", floating = true } = {}) {
+function renderDiceCluster(container, { count = 3, size = "md", floating = true } = {}) {
   container.innerHTML = "";
   DICE_SETS.slice(0, count).forEach((set, i) => {
-    container.appendChild(createDiceElement(set, { size, floating, delay: i * 0.4 }));
+    const word = set.words[i % set.words.length];
+    container.appendChild(
+      createDiceTile(set, { size, word, floating, delay: i * 0.45 })
+    );
   });
 }
 
 function renderDiceStage(container, rolled) {
   container.innerHTML = "";
-  DICE_SETS.forEach((set, i) => {
-    const item = rolled.find((r) => r.setId === set.id);
-    const el = createDiceElement(set, {
-      size: "lg",
-      word: item?.word ?? null,
-      faceIndex: item?.faceIndex ?? 0,
-    });
-    if (i >= 3) {
-      el.classList.add("dice-wrap--pending");
-    }
-    container.appendChild(el);
+  rolled.forEach((item) => {
+    const set = DICE_SETS.find((s) => s.id === item.setId);
+    container.appendChild(createDiceTile(set, { size: "lg", word: "…" }));
   });
 }
 
 function animateRoll(container, rolled, onComplete) {
-  const wraps = [...container.querySelectorAll(".dice-wrap")];
-  const cubes = [...container.querySelectorAll(".dice-cube")];
+  const tiles = [...container.querySelectorAll(".dice-tile")];
 
-  wraps.forEach((wrap) => {
-    wrap.classList.add("dice-wrap--drop");
-  });
+  tiles.forEach((tile) => tile.classList.add("dice-tile--toss"));
 
   setTimeout(() => {
-    wraps.slice(0, 3).forEach((wrap, i) => {
-      wrap.querySelector(".dice-cube")?.classList.add("dice-cube--spin");
-      wrap.style.animationDelay = `${i * 0.05}s`;
+    tiles.forEach((tile) => {
+      tile.querySelector(".dice-tile__body")?.classList.add("dice-tile__body--spin");
     });
-  }, 300);
+  }, 200);
 
-  setTimeout(() => {
-    wraps.slice(3).forEach((wrap, i) => {
-      wrap.classList.remove("dice-wrap--pending");
-      wrap.classList.add("dice-wrap--appear");
-      setTimeout(() => {
-        wrap.querySelector(".dice-cube")?.classList.add("dice-cube--spin");
-      }, i * 120);
-    });
-  }, 650);
+  const stopStart = 900;
+  const stopGap = 260;
 
-  const stopStart = 1100;
-  const stopGap = 200;
-
-  cubes.forEach((cube, i) => {
+  tiles.forEach((tile, i) => {
     setTimeout(() => {
-      cube.classList.remove("dice-cube--spin");
-      cube.classList.add("dice-cube--landed");
-      cube.style.transform = getStoppedRotation(rolled[i].faceIndex);
+      const body = tile.querySelector(".dice-tile__body");
+      body?.classList.remove("dice-tile__body--spin");
+      body?.classList.add("dice-tile__body--land");
+      setTileWord(tile, rolled[i].word);
+      tile.classList.remove("dice-tile--toss");
     }, stopStart + i * stopGap);
   });
 
   setTimeout(() => {
-    wraps.forEach((wrap) => {
-      wrap.classList.remove("dice-wrap--drop", "dice-wrap--appear");
+    tiles.forEach((tile) => {
+      tile.querySelector(".dice-tile__body")?.classList.remove("dice-tile__body--land");
     });
     onComplete?.();
   }, ROLL_DURATION);
 }
 
-function renderMiniDice(container, rolled) {
-  container.innerHTML = "";
-  rolled.forEach((item) => {
-    const set = DICE_SETS.find((s) => s.id === item.setId);
-    const el = createDiceElement(set, {
-      size: "xs",
-      word: item.word,
-      faceIndex: item.faceIndex,
-    });
-    container.appendChild(el);
-  });
+function createResultTile(item) {
+  const set = DICE_SETS.find((s) => s.id === item.setId);
+  return createDiceTile(set, { size: "lg", word: item.word });
 }
 
 /* === app.js === */
 const SITE_URL = window.location.href.split("?")[0];
-const PAGE_TRANSITION_MS = 500;
-const BEST_ANIM_MS = 1500;
+const PAGE_TRANSITION_MS = 600;
+const BEST_ANIM_MS = 1200;
+const BEST_BTN_LABEL = "✨ 显示最佳排列";
+const BEST_BTN_LOADING = "正在重新排列词语…";
 
 const state = {
   screen: "home",
@@ -483,62 +416,45 @@ function switchScreen(name) {
   state.screen = name;
   next?.querySelectorAll(".reveal").forEach((el, i) => {
     el.classList.remove("reveal--visible");
-    setTimeout(() => el.classList.add("reveal--visible"), 60 + i * 50);
+    setTimeout(() => el.classList.add("reveal--visible"), 80 + i * 60);
   });
 }
 
-function playRollSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [0, 0.15, 0.35, 0.55, 0.75, 0.95].forEach((t) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = 600 + Math.random() * 400;
-      gain.gain.setValueAtTime(0.05, ctx.currentTime + t);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.06);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(ctx.currentTime + t);
-      osc.stop(ctx.currentTime + t + 0.07);
-    });
-  } catch {
-    /* ignore */
+function resetBestPanel() {
+  const panel = $("#best-panel");
+  panel.classList.remove("best-panel--open");
+  $("#best-poem").textContent = "";
+  $("#best-poem").classList.remove("best-poem--visible");
+  $("#best-loading").hidden = true;
+
+  const btn = $("#best-arrange-btn");
+  if (btn) {
+    btn.hidden = false;
+    btn.disabled = false;
+    btn.textContent = BEST_BTN_LABEL;
   }
-}
-
-function createResultDice(item) {
-  const set = DICE_SETS.find((s) => s.id === item.setId);
-  return createDiceElement(set, {
-    size: "md",
-    word: item.word,
-    faceIndex: item.faceIndex,
-  });
+  state.bestRevealed = false;
 }
 
 function renderResultContent() {
   state.words = state.rolled.map((r) => r.word);
   state.bestPoem = generateBestPoem(state.wordMap);
   state.bestOrder = getBestOrder(state.wordMap, state.words);
-  state.bestRevealed = false;
-
-  const bestPanel = $("#best-panel");
-  bestPanel.classList.remove("best-panel--open");
-  $("#best-poem").textContent = "";
-  $("#best-poem").classList.remove("best-poem--visible");
-  $("#best-loading").hidden = true;
-
-  const btn = document.querySelector('[data-action="best-arrange"]');
-  if (btn) btn.hidden = false;
+  resetBestPanel();
 
   state.diceCtrl = initDiceDrag(
     $("#result-dice-row"),
     state.rolled,
-    createResultDice,
+    createResultTile,
     (order, dragUsed) => {
-      $("#custom-poem").textContent = composeCustomPoem(order);
       if (dragUsed) track("drag_used");
     }
   );
+
+  $("#result-dice-row").querySelectorAll(".dice-tile").forEach((tile, i) => {
+    tile.classList.add("dice-tile--stagger");
+    tile.style.animationDelay = `${i * 120}ms`;
+  });
 
   track("words_revealed", { words: state.words });
 }
@@ -547,10 +463,13 @@ function showBestArrangement() {
   if (!state.diceCtrl || state.bestRevealed) return;
   track("best_arrange_click");
 
+  const btn = $("#best-arrange-btn");
   const loading = $("#best-loading");
   const poemEl = $("#best-poem");
   const panel = $("#best-panel");
 
+  btn.disabled = true;
+  btn.textContent = BEST_BTN_LOADING;
   loading.hidden = false;
   poemEl.textContent = "";
   poemEl.classList.remove("best-poem--visible");
@@ -562,9 +481,7 @@ function showBestArrangement() {
     poemEl.classList.add("best-poem--visible");
     panel.classList.add("best-panel--open");
     state.bestRevealed = true;
-
-    const btn = document.querySelector('[data-action="best-arrange"]');
-    if (btn) btn.hidden = true;
+    btn.hidden = true;
 
     track("best_arrange_shown", { poem: state.bestPoem });
   }, BEST_ANIM_MS);
@@ -583,7 +500,6 @@ function startRoll() {
 
   const stage = $("#roll-dice-stage");
   renderDiceStage(stage, state.rolled);
-  playRollSound();
 
   animateRoll(stage, state.rolled, () => {
     renderResultContent();
@@ -610,11 +526,7 @@ function goPoster() {
     return;
   }
   const canvas = $("#poster-canvas");
-  renderPoster(canvas, {
-    words: state.words,
-    bestPoem: state.bestPoem,
-    siteUrl: SITE_URL,
-  });
+  renderPoster(canvas, { bestPoem: state.bestPoem });
   getPosterPreviewScale(canvas, $("#poster-preview").clientWidth);
   switchScreen("share");
   track("poster_view");
@@ -656,7 +568,7 @@ function bindActions() {
         track("poster_download");
         break;
       case "copy-share-text":
-        copyText(getShareCopy(state.words, state.bestPoem));
+        copyText(getShareCopy(state.bestPoem));
         track("share_copy");
         break;
       case "close-share":
@@ -668,7 +580,7 @@ function bindActions() {
         $("#share-panel").hidden = true;
         break;
       case "share-copy-text":
-        copyText(getShareCopy(state.words, state.bestPoem));
+        copyText(getShareCopy(state.bestPoem));
         track("share_text_copy");
         $("#share-panel").hidden = true;
         break;
@@ -678,55 +590,16 @@ function bindActions() {
   });
 }
 
-function initStars() {
-  const canvas = $("#stars");
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
-  let stars = [];
-  let w = 0;
-  let h = 0;
-
-  function resize() {
-    w = canvas.width = window.innerWidth;
-    h = canvas.height = window.innerHeight;
-    stars = Array.from({ length: 60 }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      r: Math.random() * 1 + 0.3,
-      a: Math.random(),
-      speed: Math.random() * 0.003 + 0.001,
-    }));
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, w, h);
-    stars.forEach((s) => {
-      s.a += s.speed;
-      const alpha = 0.15 + Math.abs(Math.sin(s.a)) * 0.35;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(143,216,255,${alpha})`;
-      ctx.fill();
-    });
-    requestAnimationFrame(draw);
-  }
-
-  resize();
-  draw();
-  window.addEventListener("resize", resize);
-}
-
 function init() {
   recordVisit();
   track("page_view", { screen: "home" });
 
-  renderDiceCluster($("#home-dice-cluster"), { count: 6, size: "sm", floating: true });
+  renderDiceCluster($("#home-dice-cluster"), { count: 3, size: "md", floating: true });
 
   document.querySelectorAll(".screen.screen--active .reveal").forEach((el, i) => {
-    setTimeout(() => el.classList.add("reveal--visible"), 80 + i * 70);
+    setTimeout(() => el.classList.add("reveal--visible"), 100 + i * 80);
   });
 
-  initStars();
   bindActions();
 }
 

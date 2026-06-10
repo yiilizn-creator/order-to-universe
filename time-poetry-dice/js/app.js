@@ -4,17 +4,18 @@ import {
   renderDiceCluster,
   renderDiceStage,
   animateRoll,
-  createDiceElement,
-  DICE_SETS,
+  createResultTile,
 } from "./dice.js";
-import { generateBestPoem, getBestOrder, composeCustomPoem, getShareCopy } from "./poem.js";
+import { generateBestPoem, getBestOrder, getShareCopy } from "./poem.js";
 import { initDiceDrag } from "./drag.js";
 import { renderPoster, downloadPoster, getPosterPreviewScale } from "./poster.js";
 import { track, recordVisit, incrementRollCount } from "./analytics.js";
 
 const SITE_URL = window.location.href.split("?")[0];
-const PAGE_TRANSITION_MS = 500;
-const BEST_ANIM_MS = 1500;
+const PAGE_TRANSITION_MS = 600;
+const BEST_ANIM_MS = 1200;
+const BEST_BTN_LABEL = "✨ 显示最佳排列";
+const BEST_BTN_LOADING = "正在重新排列词语…";
 
 const state = {
   screen: "home",
@@ -52,62 +53,45 @@ function switchScreen(name) {
   state.screen = name;
   next?.querySelectorAll(".reveal").forEach((el, i) => {
     el.classList.remove("reveal--visible");
-    setTimeout(() => el.classList.add("reveal--visible"), 60 + i * 50);
+    setTimeout(() => el.classList.add("reveal--visible"), 80 + i * 60);
   });
 }
 
-function playRollSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [0, 0.15, 0.35, 0.55, 0.75, 0.95].forEach((t) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = 600 + Math.random() * 400;
-      gain.gain.setValueAtTime(0.05, ctx.currentTime + t);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.06);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(ctx.currentTime + t);
-      osc.stop(ctx.currentTime + t + 0.07);
-    });
-  } catch {
-    /* ignore */
+function resetBestPanel() {
+  const panel = $("#best-panel");
+  panel.classList.remove("best-panel--open");
+  $("#best-poem").textContent = "";
+  $("#best-poem").classList.remove("best-poem--visible");
+  $("#best-loading").hidden = true;
+
+  const btn = $("#best-arrange-btn");
+  if (btn) {
+    btn.hidden = false;
+    btn.disabled = false;
+    btn.textContent = BEST_BTN_LABEL;
   }
-}
-
-function createResultDice(item) {
-  const set = DICE_SETS.find((s) => s.id === item.setId);
-  return createDiceElement(set, {
-    size: "md",
-    word: item.word,
-    faceIndex: item.faceIndex,
-  });
+  state.bestRevealed = false;
 }
 
 function renderResultContent() {
   state.words = state.rolled.map((r) => r.word);
   state.bestPoem = generateBestPoem(state.wordMap);
   state.bestOrder = getBestOrder(state.wordMap, state.words);
-  state.bestRevealed = false;
-
-  const bestPanel = $("#best-panel");
-  bestPanel.classList.remove("best-panel--open");
-  $("#best-poem").textContent = "";
-  $("#best-poem").classList.remove("best-poem--visible");
-  $("#best-loading").hidden = true;
-
-  const btn = document.querySelector('[data-action="best-arrange"]');
-  if (btn) btn.hidden = false;
+  resetBestPanel();
 
   state.diceCtrl = initDiceDrag(
     $("#result-dice-row"),
     state.rolled,
-    createResultDice,
+    createResultTile,
     (order, dragUsed) => {
-      $("#custom-poem").textContent = composeCustomPoem(order);
       if (dragUsed) track("drag_used");
     }
   );
+
+  $("#result-dice-row").querySelectorAll(".dice-tile").forEach((tile, i) => {
+    tile.classList.add("dice-tile--stagger");
+    tile.style.animationDelay = `${i * 120}ms`;
+  });
 
   track("words_revealed", { words: state.words });
 }
@@ -116,10 +100,13 @@ function showBestArrangement() {
   if (!state.diceCtrl || state.bestRevealed) return;
   track("best_arrange_click");
 
+  const btn = $("#best-arrange-btn");
   const loading = $("#best-loading");
   const poemEl = $("#best-poem");
   const panel = $("#best-panel");
 
+  btn.disabled = true;
+  btn.textContent = BEST_BTN_LOADING;
   loading.hidden = false;
   poemEl.textContent = "";
   poemEl.classList.remove("best-poem--visible");
@@ -131,9 +118,7 @@ function showBestArrangement() {
     poemEl.classList.add("best-poem--visible");
     panel.classList.add("best-panel--open");
     state.bestRevealed = true;
-
-    const btn = document.querySelector('[data-action="best-arrange"]');
-    if (btn) btn.hidden = true;
+    btn.hidden = true;
 
     track("best_arrange_shown", { poem: state.bestPoem });
   }, BEST_ANIM_MS);
@@ -152,7 +137,6 @@ function startRoll() {
 
   const stage = $("#roll-dice-stage");
   renderDiceStage(stage, state.rolled);
-  playRollSound();
 
   animateRoll(stage, state.rolled, () => {
     renderResultContent();
@@ -179,11 +163,7 @@ function goPoster() {
     return;
   }
   const canvas = $("#poster-canvas");
-  renderPoster(canvas, {
-    words: state.words,
-    bestPoem: state.bestPoem,
-    siteUrl: SITE_URL,
-  });
+  renderPoster(canvas, { bestPoem: state.bestPoem });
   getPosterPreviewScale(canvas, $("#poster-preview").clientWidth);
   switchScreen("share");
   track("poster_view");
@@ -225,7 +205,7 @@ function bindActions() {
         track("poster_download");
         break;
       case "copy-share-text":
-        copyText(getShareCopy(state.words, state.bestPoem));
+        copyText(getShareCopy(state.bestPoem));
         track("share_copy");
         break;
       case "close-share":
@@ -237,7 +217,7 @@ function bindActions() {
         $("#share-panel").hidden = true;
         break;
       case "share-copy-text":
-        copyText(getShareCopy(state.words, state.bestPoem));
+        copyText(getShareCopy(state.bestPoem));
         track("share_text_copy");
         $("#share-panel").hidden = true;
         break;
@@ -247,55 +227,16 @@ function bindActions() {
   });
 }
 
-function initStars() {
-  const canvas = $("#stars");
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
-  let stars = [];
-  let w = 0;
-  let h = 0;
-
-  function resize() {
-    w = canvas.width = window.innerWidth;
-    h = canvas.height = window.innerHeight;
-    stars = Array.from({ length: 60 }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      r: Math.random() * 1 + 0.3,
-      a: Math.random(),
-      speed: Math.random() * 0.003 + 0.001,
-    }));
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, w, h);
-    stars.forEach((s) => {
-      s.a += s.speed;
-      const alpha = 0.15 + Math.abs(Math.sin(s.a)) * 0.35;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(143,216,255,${alpha})`;
-      ctx.fill();
-    });
-    requestAnimationFrame(draw);
-  }
-
-  resize();
-  draw();
-  window.addEventListener("resize", resize);
-}
-
 function init() {
   recordVisit();
   track("page_view", { screen: "home" });
 
-  renderDiceCluster($("#home-dice-cluster"), { count: 6, size: "sm", floating: true });
+  renderDiceCluster($("#home-dice-cluster"), { count: 3, size: "md", floating: true });
 
   document.querySelectorAll(".screen.screen--active .reveal").forEach((el, i) => {
-    setTimeout(() => el.classList.add("reveal--visible"), 80 + i * 70);
+    setTimeout(() => el.classList.add("reveal--visible"), 100 + i * 80);
   });
 
-  initStars();
   bindActions();
 }
 

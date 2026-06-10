@@ -8,32 +8,32 @@ export function initDiceDrag(container, rolledItems, createItemEl, onChange) {
       const el = createItemEl(item);
       el.draggable = true;
       el.dataset.index = String(index);
-      el.classList.add("dice-wrap--draggable");
+      el.classList.add("dice-tile--draggable");
 
       el.addEventListener("dragstart", (e) => {
         dragUsed = true;
-        el.classList.add("dice-wrap--dragging");
+        el.classList.add("dice-tile--dragging");
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", String(index));
       });
 
       el.addEventListener("dragend", () => {
-        el.classList.remove("dice-wrap--dragging");
+        el.classList.remove("dice-tile--dragging");
       });
 
       el.addEventListener("dragover", (e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
-        el.classList.add("dice-wrap--over");
+        el.classList.add("dice-tile--over");
       });
 
       el.addEventListener("dragleave", () => {
-        el.classList.remove("dice-wrap--over");
+        el.classList.remove("dice-tile--over");
       });
 
       el.addEventListener("drop", (e) => {
         e.preventDefault();
-        el.classList.remove("dice-wrap--over");
+        el.classList.remove("dice-tile--over");
         const from = Number(e.dataTransfer.getData("text/plain"));
         const to = Number(el.dataset.index);
         if (from === to) return;

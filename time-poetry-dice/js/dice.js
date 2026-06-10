@@ -7,15 +7,6 @@ export const DICE_SETS = [
   { id: "action", label: "动作", words: ["流过", "经过", "停留", "闪烁", "坠落", "消失"] },
 ];
 
-const FACE_TRANSFORMS = [
-  "rotateY(0deg) translateZ(var(--half))",
-  "rotateY(90deg) translateZ(var(--half))",
-  "rotateY(180deg) translateZ(var(--half))",
-  "rotateY(-90deg) translateZ(var(--half))",
-  "rotateX(90deg) translateZ(var(--half))",
-  "rotateX(-90deg) translateZ(var(--half))",
-];
-
 const ROLL_DURATION = 2500;
 
 export function rollDice() {
@@ -38,131 +29,108 @@ export function wordsToMap(rolled) {
   return map;
 }
 
-function createFace(word, index) {
-  const face = document.createElement("div");
-  face.className = "dice-face";
-  face.style.transform = FACE_TRANSFORMS[index];
-  face.textContent = word;
-  return face;
-}
+export function createDiceTile(set, options = {}) {
+  const {
+    size = "md",
+    word = "…",
+    floating = false,
+    delay = 0,
+    stagger = false,
+  } = options;
 
-export function createDiceElement(set, options = {}) {
-  const { size = "md", word = null, faceIndex = 0, floating = false, delay = 0 } = options;
-
-  const wrap = document.createElement("div");
-  wrap.className = `dice-wrap dice-wrap--${size}`;
+  const tile = document.createElement("div");
+  tile.className = `dice-tile dice-tile--${size}`;
   if (floating) {
-    wrap.classList.add("dice-wrap--float");
-    wrap.style.animationDelay = `${delay}s`;
+    tile.classList.add("dice-tile--float");
+    tile.style.animationDelay = `${delay}s`;
   }
-  wrap.dataset.setId = set.id;
-
-  const cube = document.createElement("div");
-  cube.className = "dice-cube";
-  cube.setAttribute("role", "img");
-  cube.setAttribute("aria-label", `${set.label}骰子`);
-
-  set.words.forEach((w, i) => {
-    cube.appendChild(createFace(w, i));
-  });
-
-  if (word !== null) {
-    cube.dataset.face = String(faceIndex);
-    cube.style.transform = getStoppedRotation(faceIndex);
+  if (stagger) {
+    tile.classList.add("dice-tile--stagger");
+    tile.style.animationDelay = `${delay}ms`;
   }
+  tile.dataset.setId = set.id;
 
-  wrap.appendChild(cube);
-  return wrap;
+  const body = document.createElement("div");
+  body.className = "dice-tile__body";
+
+  const edgeTop = document.createElement("div");
+  edgeTop.className = "dice-tile__edge dice-tile__edge--top";
+  edgeTop.setAttribute("aria-hidden", "true");
+
+  const edgeLeft = document.createElement("div");
+  edgeLeft.className = "dice-tile__edge dice-tile__edge--left";
+  edgeLeft.setAttribute("aria-hidden", "true");
+
+  const front = document.createElement("div");
+  front.className = "dice-tile__front";
+  front.textContent = word;
+
+  body.appendChild(edgeTop);
+  body.appendChild(edgeLeft);
+  body.appendChild(front);
+  tile.appendChild(body);
+  tile.setAttribute("role", "img");
+  tile.setAttribute("aria-label", `${set.label}：${word}`);
+  return tile;
 }
 
-export function getStoppedRotation(faceIndex) {
-  const rotations = [
-    "rotateX(-12deg) rotateY(18deg)",
-    "rotateX(-12deg) rotateY(-72deg)",
-    "rotateX(-12deg) rotateY(-162deg)",
-    "rotateX(-12deg) rotateY(108deg)",
-    "rotateX(-102deg) rotateY(18deg)",
-    "rotateX(78deg) rotateY(18deg)",
-  ];
-  return rotations[faceIndex] || rotations[0];
+export function setTileWord(tile, word) {
+  const front = tile.querySelector(".dice-tile__front");
+  if (front) front.textContent = word;
+  tile.setAttribute("aria-label", word);
 }
 
-export function renderDiceCluster(container, { count = 6, size = "sm", floating = true } = {}) {
+export function renderDiceCluster(container, { count = 3, size = "md", floating = true } = {}) {
   container.innerHTML = "";
   DICE_SETS.slice(0, count).forEach((set, i) => {
-    container.appendChild(createDiceElement(set, { size, floating, delay: i * 0.4 }));
+    const word = set.words[i % set.words.length];
+    container.appendChild(
+      createDiceTile(set, { size, word, floating, delay: i * 0.45 })
+    );
   });
 }
 
 export function renderDiceStage(container, rolled) {
   container.innerHTML = "";
-  DICE_SETS.forEach((set, i) => {
-    const item = rolled.find((r) => r.setId === set.id);
-    const el = createDiceElement(set, {
-      size: "lg",
-      word: item?.word ?? null,
-      faceIndex: item?.faceIndex ?? 0,
-    });
-    if (i >= 3) {
-      el.classList.add("dice-wrap--pending");
-    }
-    container.appendChild(el);
+  rolled.forEach((item) => {
+    const set = DICE_SETS.find((s) => s.id === item.setId);
+    container.appendChild(createDiceTile(set, { size: "lg", word: "…" }));
   });
 }
 
 export function animateRoll(container, rolled, onComplete) {
-  const wraps = [...container.querySelectorAll(".dice-wrap")];
-  const cubes = [...container.querySelectorAll(".dice-cube")];
+  const tiles = [...container.querySelectorAll(".dice-tile")];
 
-  wraps.forEach((wrap) => {
-    wrap.classList.add("dice-wrap--drop");
-  });
+  tiles.forEach((tile) => tile.classList.add("dice-tile--toss"));
 
   setTimeout(() => {
-    wraps.slice(0, 3).forEach((wrap, i) => {
-      wrap.querySelector(".dice-cube")?.classList.add("dice-cube--spin");
-      wrap.style.animationDelay = `${i * 0.05}s`;
+    tiles.forEach((tile) => {
+      tile.querySelector(".dice-tile__body")?.classList.add("dice-tile__body--spin");
     });
-  }, 300);
+  }, 200);
 
-  setTimeout(() => {
-    wraps.slice(3).forEach((wrap, i) => {
-      wrap.classList.remove("dice-wrap--pending");
-      wrap.classList.add("dice-wrap--appear");
-      setTimeout(() => {
-        wrap.querySelector(".dice-cube")?.classList.add("dice-cube--spin");
-      }, i * 120);
-    });
-  }, 650);
+  const stopStart = 900;
+  const stopGap = 260;
 
-  const stopStart = 1100;
-  const stopGap = 200;
-
-  cubes.forEach((cube, i) => {
+  tiles.forEach((tile, i) => {
     setTimeout(() => {
-      cube.classList.remove("dice-cube--spin");
-      cube.classList.add("dice-cube--landed");
-      cube.style.transform = getStoppedRotation(rolled[i].faceIndex);
+      const body = tile.querySelector(".dice-tile__body");
+      body?.classList.remove("dice-tile__body--spin");
+      body?.classList.add("dice-tile__body--land");
+      setTileWord(tile, rolled[i].word);
+      tile.classList.remove("dice-tile--toss");
     }, stopStart + i * stopGap);
   });
 
   setTimeout(() => {
-    wraps.forEach((wrap) => {
-      wrap.classList.remove("dice-wrap--drop", "dice-wrap--appear");
+    tiles.forEach((tile) => {
+      tile.querySelector(".dice-tile__body")?.classList.remove("dice-tile__body--land");
     });
     onComplete?.();
   }, ROLL_DURATION);
 }
 
-export function renderMiniDice(container, rolled) {
-  container.innerHTML = "";
-  rolled.forEach((item) => {
-    const set = DICE_SETS.find((s) => s.id === item.setId);
-    const el = createDiceElement(set, {
-      size: "xs",
-      word: item.word,
-      faceIndex: item.faceIndex,
-    });
-    container.appendChild(el);
-  });
+export function createResultTile(item) {
+  const set = DICE_SETS.find((s) => s.id === item.setId);
+  return createDiceTile(set, { size: "lg", word: item.word });
 }

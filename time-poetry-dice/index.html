@@ -6,21 +6,15 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="format-detection" content="telephone=no" />
-    <meta name="description" content="随机六个词，拼出一句意想不到的话。" />
-    <meta name="theme-color" content="#FAFAFA" />
+    <meta name="description" content="随机六个词，组成一句话。" />
+    <meta name="theme-color" content="#FAF8F6" />
     <meta property="og:title" content="时间的诗" />
-    <meta property="og:description" content="随机六个词，拼出一句意想不到的话。" />
+    <meta property="og:description" content="随机六个词，组成一句话。" />
     <meta property="og:type" content="website" />
     <title>时间的诗</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
-    <canvas id="stars" aria-hidden="true"></canvas>
-    <div class="aurora" aria-hidden="true"></div>
-
     <div id="app">
       <!-- 首页 -->
       <section class="screen screen--active" data-screen="home">
@@ -29,7 +23,7 @@
           <div class="home-spacer reveal" aria-hidden="true"></div>
           <div class="home-main reveal">
             <h1 class="hero-title">时间的诗</h1>
-            <p class="hero-sub">随机六个词<br />拼出一句意想不到的话</p>
+            <p class="hero-sub">随机六个词<br />组成一句话</p>
           </div>
           <div class="home-bottom reveal">
             <div class="dice-cluster" id="home-dice-cluster" aria-hidden="true"></div>
@@ -48,23 +42,28 @@
       <!-- 结果页 -->
       <section class="screen" data-screen="result">
         <div class="screen-content result-content">
-          <div class="arrange-core reveal">
-            <h2 class="module-title">你会怎么排列？</h2>
-            <p class="module-hint">拖拽骰子，排出你的顺序</p>
+          <div class="result-top reveal">
             <div class="dice-row dice-row--draggable" id="result-dice-row"></div>
-            <p class="custom-preview" id="custom-poem"></p>
-            <button class="btn btn-soft" type="button" data-action="best-arrange">显示最佳排列</button>
+          </div>
+
+          <div class="arrange-section reveal">
+            <h2 class="module-title">你会怎么排列？</h2>
+            <p class="module-hint">拖动骰子试试看</p>
+            <button class="btn btn-primary" type="button" data-action="best-arrange" id="best-arrange-btn">
+              ✨ 显示最佳排列
+            </button>
           </div>
 
           <div class="best-panel" id="best-panel">
-            <p class="best-loading" id="best-loading" hidden>正在寻找最合适的位置…</p>
+            <h3 class="best-panel__title">最佳排列</h3>
+            <p class="best-loading" id="best-loading" hidden>正在重新排列词语…</p>
             <p class="best-poem" id="best-poem"></p>
           </div>
 
           <div class="actions actions--result reveal">
-            <button class="btn btn-primary" type="button" data-action="save-poster">保存图片</button>
+            <button class="btn btn-secondary" type="button" data-action="save-poster">保存图片</button>
             <button class="btn btn-secondary" type="button" data-action="roll-again">重新投掷</button>
-            <button class="btn btn-ghost" type="button" data-action="share-friend">分享给朋友</button>
+            <button class="btn btn-secondary" type="button" data-action="share-friend">分享给朋友</button>
           </div>
         </div>
       </section>
