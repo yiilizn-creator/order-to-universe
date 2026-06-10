@@ -13,7 +13,8 @@
   --aurora: #7de2ff;
   --gold: #f6d17a;
   --text-dim: rgba(246, 247, 251, 0.55);
-  --transition-page: 1000ms;
+  --transition-page: 900ms;
+  --transition-page-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --transition-text: 650ms;
   --breath-cycle: 4s;
   --safe-top: env(safe-area-inset-top, 0px);
@@ -57,6 +58,8 @@ body {
   z-index: 2;
   height: 100%;
   height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
 }
 
 .screen {
@@ -70,11 +73,18 @@ body {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translateY(12px);
+  transform: translateY(18px);
+  will-change: opacity, transform;
   transition:
-    opacity var(--transition-page) ease,
-    transform var(--transition-page) ease,
-    visibility var(--transition-page);
+    opacity var(--transition-page) var(--transition-page-ease),
+    transform var(--transition-page) var(--transition-page-ease),
+    visibility 0s linear var(--transition-page);
+}
+
+.screen--entering {
+  visibility: visible;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .screen--active {
@@ -83,14 +93,22 @@ body {
   visibility: visible;
   pointer-events: auto;
   transform: translateY(0);
+  transition:
+    opacity var(--transition-page) var(--transition-page-ease),
+    transform var(--transition-page) var(--transition-page-ease),
+    visibility 0s linear 0s;
 }
 
 .screen--leaving {
-  z-index: 0;
+  z-index: 3;
   opacity: 0;
-  visibility: hidden;
+  visibility: visible;
   pointer-events: none;
-  transform: translateY(-8px);
+  transform: translateY(-14px);
+  transition:
+    opacity calc(var(--transition-page) * 0.85) var(--transition-page-ease),
+    transform calc(var(--transition-page) * 0.85) var(--transition-page-ease),
+    visibility 0s linear calc(var(--transition-page) * 0.85);
 }
 
 .screen-content {
@@ -656,13 +674,22 @@ body {
   opacity: 0;
   transform: translateY(10px);
   transition:
-    opacity var(--transition-text) ease,
-    transform var(--transition-text) ease;
+    opacity var(--transition-text) cubic-bezier(0.22, 1, 0.36, 1),
+    transform var(--transition-text) cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .reveal--visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen,
+  .screen--active,
+  .screen--leaving,
+  .reveal {
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @keyframes breathe {

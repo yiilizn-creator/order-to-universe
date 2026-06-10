@@ -1,4 +1,5 @@
 const STORAGE_KEY = "order-to-universe";
+const SITE_URL = "https://yiilizn-creator.github.io/order-to-universe/";
 let answersData = [];
 const SPECIAL_NUMBERS = [11, 22, 33, 44, 55, 66, 77, 88, 99];
 const SPECIAL_TIMES = ["01:11", "02:22", "03:33", "04:44"];
@@ -102,18 +103,17 @@ function setCosmosReminder(visible) {
   reminder.hidden = !visible;
 }
 
-function prepareWelcomeExit() {
-  const hero = $("#welcome-hero");
-  const reminder = $("#cosmos-reminder");
-  reminder.hidden = true;
-  hero.hidden = true;
+function resetWelcomeHidden() {
+  state.showReminder = false;
+  const welcome = $('.screen[data-screen="welcome"]');
+  welcome.classList.remove("screen--reminder", "screen--leaving", "screen--entering", "screen--active");
+  $("#welcome-hero").hidden = false;
+  $("#cosmos-reminder").hidden = true;
+  welcome.querySelectorAll(".reveal").forEach((el) => el.classList.remove("reveal--visible"));
 }
 
-function resetWelcomeState() {
-  setCosmosReminder(false);
-  const welcome = $('.screen[data-screen="welcome"]');
-  welcome.classList.remove("screen--leaving");
-}
+const PAGE_TRANSITION_MS = 900;
+let isPageTransitioning = false;
 
 function getResultId() {
   return state.answer?.id ?? 0;
@@ -127,34 +127,69 @@ function formatDisplayNo() {
   return String(getDisplayNumber()).padStart(2, "0");
 }
 
-function showScreen(name, { instant = false } = {}) {
+function showScreen(name, { direct = false } = {}) {
+  if (isPageTransitioning && state.screen === name) return;
+
   const current = $(`.screen[data-screen="${state.screen}"]`);
   const next = $(`.screen[data-screen="${name}"]`);
+  if (!next || current === next) return;
 
-  if (current && current !== next) {
-    current.classList.remove("screen--active");
-    if (instant) {
-      current.classList.remove("screen--leaving");
-    } else {
-      current.classList.add("screen--leaving");
-      setTimeout(() => current.classList.remove("screen--leaving"), 1000);
+  isPageTransitioning = true;
+  const unlockMs = direct ? 500 : PAGE_TRANSITION_MS + 120;
+  setTimeout(() => { isPageTransitioning = false; }, unlockMs);
+
+  next.querySelectorAll(".reveal").forEach((el) => el.classList.remove("reveal--visible"));
+
+  if (direct) {
+    if (current) {
+      current.classList.remove("screen--active", "screen--entering", "screen--leaving");
     }
+    next.classList.remove("screen--leaving", "screen--active");
+    next.classList.add("screen--entering");
+    void next.offsetWidth;
+    requestAnimationFrame(() => {
+      next.classList.remove("screen--entering");
+      next.classList.add("screen--active");
+      animateReveals(next, 100);
+    });
+    state.screen = name;
+    return;
   }
 
-  if (next) {
-    next.classList.remove("screen--leaving");
-    next.classList.add("screen--active");
-    animateReveals(next);
+  if (current) {
+    current.classList.remove("screen--active", "screen--entering");
+    current.classList.add("screen--leaving");
+
+    const finishLeave = () => {
+      current.classList.remove("screen--leaving");
+    };
+    const onLeaveEnd = (e) => {
+      if (e.target !== current || e.propertyName !== "opacity") return;
+      current.removeEventListener("transitionend", onLeaveEnd);
+      finishLeave();
+    };
+    current.addEventListener("transitionend", onLeaveEnd);
+    setTimeout(finishLeave, PAGE_TRANSITION_MS + 100);
   }
+
+  next.classList.remove("screen--leaving", "screen--active");
+  next.classList.add("screen--entering");
+  void next.offsetWidth;
+
+  requestAnimationFrame(() => {
+    next.classList.remove("screen--entering");
+    next.classList.add("screen--active");
+    animateReveals(next, 180);
+  });
 
   state.screen = name;
 }
 
-function animateReveals(container) {
+function animateReveals(container, baseDelay = 0) {
   const items = container.querySelectorAll(".reveal");
   items.forEach((el) => el.classList.remove("reveal--visible"));
   items.forEach((el, i) => {
-    const delay = Number(el.dataset.delay || 0) * 400 + i * 80;
+    const delay = baseDelay + Number(el.dataset.delay || 0) * 350 + i * 70;
     setTimeout(() => el.classList.add("reveal--visible"), delay);
   });
 }
@@ -222,7 +257,11 @@ function isWeChat() {
 }
 
 function getShareUrl() {
-  return window.location.href.split("#")[0].split("?")[0];
+  return SITE_URL;
+}
+
+function getPosterQrUrl() {
+  return getShareUrl();
 }
 
 function getShareTitle() {
@@ -437,7 +476,7 @@ async function drawPoster() {
 
   try {
     const qrImg = await loadImage(
-      `https://api.qrserver.com/v1/create-qr-code/?size=400x400&bgcolor=060816&color=f6f7fb&data=${encodeURIComponent(getShareUrl())}`
+      `https://api.qrserver.com/v1/create-qr-code/?size=400x400&bgcolor=060816&color=f6f7fb&data=${encodeURIComponent(getPosterQrUrl())}`
     );
     ctx.fillStyle = "rgba(246, 247, 251, 0.08)";
     ctx.fillRect(qrX - 10, y - 10, qrSize + 20, qrSize + 20);
@@ -450,9 +489,13 @@ async function drawPoster() {
     ctx.fillText("扫码体验", w / 2, y + qrSize / 2 + 4);
   }
 
+  ctx.fillStyle = "rgba(246, 247, 251, 0.45)";
+  ctx.font = "300 11px 'Noto Sans SC', sans-serif";
+  ctx.fillText("扫码体验", w / 2, y + qrSize + 24);
+
   ctx.fillStyle = "#b58cff";
   ctx.font = "300 12px 'Noto Sans SC', sans-serif";
-  ctx.fillText("向宇宙下单", w / 2, y + qrSize + 32);
+  ctx.fillText("向宇宙下单", w / 2, y + qrSize + 44);
 }
 
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
@@ -650,9 +693,12 @@ function bindEvents() {
 
     switch (action) {
       case "start":
-        prepareWelcomeExit();
-        showScreen("meditate", { instant: true });
-        setTimeout(resetWelcomeState, 50);
+        if (state.showReminder) {
+          showScreen("meditate", { direct: true });
+          resetWelcomeHidden();
+        } else {
+          showScreen("meditate");
+        }
         break;
       case "confirm-question":
         track("question_confirm");
