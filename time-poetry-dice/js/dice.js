@@ -16,6 +16,8 @@ const FACE_TRANSFORMS = [
   "rotateX(-90deg) translateZ(var(--half))",
 ];
 
+const ROLL_DURATION = 2500;
+
 export function rollDice() {
   return DICE_SETS.map((set) => {
     const faceIndex = Math.floor(Math.random() * 6);
@@ -54,7 +56,6 @@ export function createDiceElement(set, options = {}) {
     wrap.style.animationDelay = `${delay}s`;
   }
   wrap.dataset.setId = set.id;
-  wrap.dataset.label = set.label;
 
   const cube = document.createElement("div");
   cube.className = "dice-cube";
@@ -86,59 +87,82 @@ export function getStoppedRotation(faceIndex) {
   return rotations[faceIndex] || rotations[0];
 }
 
-export function renderDiceCluster(container, { size = "sm", floating = true } = {}) {
+export function renderDiceCluster(container, { count = 3, size = "sm", floating = true } = {}) {
   container.innerHTML = "";
-  DICE_SETS.forEach((set, i) => {
-    container.appendChild(createDiceElement(set, { size, floating, delay: i * 0.35 }));
+  DICE_SETS.slice(0, count).forEach((set, i) => {
+    container.appendChild(createDiceElement(set, { size, floating, delay: i * 0.4 }));
   });
 }
 
-export function renderDiceStage(container, rolled = null) {
+export function renderDiceStage(container, rolled) {
   container.innerHTML = "";
   DICE_SETS.forEach((set, i) => {
-    const item = rolled?.find((r) => r.setId === set.id);
+    const item = rolled.find((r) => r.setId === set.id);
     const el = createDiceElement(set, {
       size: "lg",
       word: item?.word ?? null,
       faceIndex: item?.faceIndex ?? 0,
-      delay: i * 0.1,
     });
+    if (i >= 3) {
+      el.classList.add("dice-wrap--pending");
+    }
     container.appendChild(el);
   });
 }
 
 export function animateRoll(container, rolled, onComplete) {
-  const cubes = container.querySelectorAll(".dice-cube");
-  const wraps = container.querySelectorAll(".dice-wrap");
+  const wraps = [...container.querySelectorAll(".dice-wrap")];
+  const cubes = [...container.querySelectorAll(".dice-cube")];
 
-  wraps.forEach((wrap) => wrap.classList.add("dice-wrap--rolling"));
-
-  cubes.forEach((cube, i) => {
-    cube.classList.add("dice-cube--spin");
-    cube.style.animationDelay = `${i * 0.08}s`;
+  wraps.forEach((wrap) => {
+    wrap.classList.add("dice-wrap--drop");
   });
 
   setTimeout(() => {
-    cubes.forEach((cube) => {
-      cube.classList.remove("dice-cube--spin");
-      cube.classList.add("dice-cube--bounce");
+    wraps.slice(0, 3).forEach((wrap, i) => {
+      wrap.querySelector(".dice-cube")?.classList.add("dice-cube--spin");
+      wrap.style.animationDelay = `${i * 0.05}s`;
     });
-  }, 1500);
+  }, 300);
+
+  setTimeout(() => {
+    wraps.slice(3).forEach((wrap, i) => {
+      wrap.classList.remove("dice-wrap--pending");
+      wrap.classList.add("dice-wrap--appear");
+      setTimeout(() => {
+        wrap.querySelector(".dice-cube")?.classList.add("dice-cube--spin");
+      }, i * 120);
+    });
+  }, 650);
+
+  const stopStart = 1100;
+  const stopGap = 200;
 
   cubes.forEach((cube, i) => {
     setTimeout(() => {
-      const item = rolled[i];
-      cube.classList.remove("dice-cube--bounce");
+      cube.classList.remove("dice-cube--spin");
       cube.classList.add("dice-cube--landed");
-      cube.style.transform = getStoppedRotation(item.faceIndex);
-      cube.dataset.face = String(item.faceIndex);
-
-    }, 1800 + i * 120);
+      cube.style.transform = getStoppedRotation(rolled[i].faceIndex);
+    }, stopStart + i * stopGap);
   });
 
-  const lastStop = 1800 + (cubes.length - 1) * 120 + 400;
   setTimeout(() => {
-    wraps.forEach((wrap) => wrap.classList.remove("dice-wrap--rolling"));
+    wraps.forEach((wrap) => {
+      wrap.classList.remove("dice-wrap--drop", "dice-wrap--appear");
+    });
     onComplete?.();
-  }, lastStop);
+  }, ROLL_DURATION);
+}
+
+export function renderMiniDice(container, rolled) {
+  container.innerHTML = "";
+  rolled.forEach((item) => {
+    const set = DICE_SETS.find((s) => s.id === item.setId);
+    const el = createDiceElement(set, {
+      size: "xs",
+      word: item.word,
+      faceIndex: item.faceIndex,
+    });
+    container.appendChild(el);
+  });
 }

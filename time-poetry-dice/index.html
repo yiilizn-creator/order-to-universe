@@ -6,10 +6,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="format-detection" content="telephone=no" />
-    <meta name="description" content="掷出六枚词语骰子，让随机替你写出一句藏在心里的诗。" />
+    <meta name="description" content="随机六个词，拼出一句意想不到的话。" />
     <meta name="theme-color" content="#FAFAFA" />
     <meta property="og:title" content="时间的诗" />
-    <meta property="og:description" content="掷出六枚词语骰子，随机会替你说出那些没说出口的话。" />
+    <meta property="og:description" content="随机六个词，拼出一句意想不到的话。" />
     <meta property="og:type" content="website" />
     <title>时间的诗</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -18,21 +18,18 @@
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
-    <canvas id="stars" aria-hidden="true"></canvas>
-    <div class="aurora" aria-hidden="true"></div>
-
     <div id="app">
       <!-- 首页 -->
       <section class="screen screen--active" data-screen="home">
         <div class="screen-content home-content">
           <p class="logo reveal">时间的诗</p>
-          <div class="dice-cluster reveal" id="home-dice-cluster" aria-hidden="true"></div>
-          <h1 class="hero-title reveal">《时间的诗》</h1>
-          <p class="hero-sub reveal">
-            掷出六枚词语骰子<br />
-            随机会替你说出 那些没说出口的话
-          </p>
-          <div class="actions reveal">
+          <div class="home-spacer reveal" aria-hidden="true"></div>
+          <div class="home-main reveal">
+            <h1 class="hero-title">时间的诗</h1>
+            <p class="hero-sub">随机六个词<br />拼出一句意想不到的话</p>
+          </div>
+          <div class="home-bottom reveal">
+            <div class="dice-cluster dice-cluster--3" id="home-dice-cluster" aria-hidden="true"></div>
             <button class="btn btn-primary" type="button" data-action="start-roll">开始投掷</button>
           </div>
         </div>
@@ -41,40 +38,29 @@
       <!-- 投掷页 -->
       <section class="screen" data-screen="roll">
         <div class="screen-content roll-content">
-          <p class="roll-hint">骰子正在滚动…</p>
           <div class="dice-stage" id="roll-dice-stage"></div>
-          <div class="particle-burst" id="particle-burst" aria-hidden="true"></div>
         </div>
       </section>
 
       <!-- 结果页 -->
       <section class="screen" data-screen="result">
         <div class="screen-content result-content">
-          <p class="section-label reveal">你掷出了</p>
-          <div class="dice-row reveal" id="result-dice-row"></div>
+          <div class="result-dice-mini reveal" id="result-dice-row"></div>
 
-          <article class="module reveal">
-            <h2 class="module-title">宇宙替你排好了答案</h2>
-            <p class="poem-text" id="ai-poem"></p>
-            <button class="text-btn" type="button" data-action="copy-poem">复制诗句</button>
-          </article>
-
-          <article class="module reveal">
-            <h2 class="module-title">自己写一句</h2>
-            <p class="module-hint">拖拽词语，排列出属于你的诗</p>
+          <div class="arrange-core reveal">
+            <h2 class="module-title">你会怎么排列？</h2>
+            <div class="word-reveal" id="word-reveal" aria-live="polite"></div>
             <div class="tag-list" id="tag-list"></div>
-            <p class="custom-poem" id="custom-poem"></p>
-          </article>
-
-          <article class="module module--interpret reveal">
-            <h2 class="module-title">宇宙解读</h2>
-            <p class="interpret-text" id="interpret-text"></p>
-          </article>
+            <p class="custom-preview" id="custom-poem"></p>
+            <button class="btn btn-soft" type="button" data-action="best-arrange">看看最佳排列</button>
+            <p class="best-loading" id="best-loading" hidden>正在寻找最合适的位置…</p>
+            <p class="best-poem" id="best-poem"></p>
+          </div>
 
           <div class="actions actions--result reveal">
-            <button class="btn btn-primary" type="button" data-action="save-poster">保存诗卡</button>
-            <button class="btn btn-secondary" type="button" data-action="share-friend">分享给朋友</button>
-            <button class="btn btn-ghost" type="button" data-action="roll-again">再掷一次</button>
+            <button class="btn btn-primary" type="button" data-action="save-poster">保存图片</button>
+            <button class="btn btn-secondary" type="button" data-action="roll-again">重新投掷</button>
+            <button class="btn btn-ghost" type="button" data-action="share-friend">分享给朋友</button>
           </div>
         </div>
       </section>
@@ -108,10 +94,6 @@
           <button class="share-option" type="button" data-action="share-copy-text">
             <span class="share-option__icon">📝</span>
             <span class="share-option__label">复制文案</span>
-          </button>
-          <button class="share-option" type="button" data-action="share-save">
-            <span class="share-option__icon">🖼️</span>
-            <span class="share-option__label">保存诗卡</span>
           </button>
         </div>
         <button class="share-panel__cancel" type="button" data-action="close-share">取消</button>

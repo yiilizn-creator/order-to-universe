@@ -3,29 +3,31 @@ import {
   wordsToMap,
   renderDiceCluster,
   renderDiceStage,
-  createDiceElement,
   animateRoll,
-  DICE_SETS,
+  renderMiniDice,
 } from "./dice.js";
-import { generatePoem, generateInterpretation, composeCustomPoem, getShareCopy } from "./poem.js";
+import { generateBestPoem, getBestOrder, composeCustomPoem, getShareCopy } from "./poem.js";
 import { initTagDrag } from "./drag.js";
 import { renderPoster, downloadPoster, getPosterPreviewScale } from "./poster.js";
 import { track, recordVisit, incrementRollCount } from "./analytics.js";
 
 const SITE_URL = window.location.href.split("?")[0];
-const PAGE_TRANSITION_MS = 600;
+const PAGE_TRANSITION_MS = 500;
+const BEST_ANIM_MS = 1500;
 
 const state = {
   screen: "home",
   rolled: [],
   wordMap: {},
-  poem: "",
+  words: [],
+  bestPoem: "",
+  bestOrder: [],
   customPoem: "",
   isRolling: false,
+  tagCtrl: null,
 };
 
 const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => document.querySelectorAll(sel);
 
 function showToast(msg) {
   const toast = $("#toast");
@@ -43,90 +45,90 @@ function switchScreen(name) {
   const next = $(`.screen[data-screen="${name}"]`);
 
   prev?.classList.remove("screen--active");
-  prev?.classList.add("screen--leaving");
-  setTimeout(() => prev?.classList.remove("screen--leaving"), PAGE_TRANSITION_MS);
-
   next?.classList.add("screen--active", "screen--entering");
   setTimeout(() => next?.classList.remove("screen--entering"), PAGE_TRANSITION_MS);
 
   state.screen = name;
   next?.querySelectorAll(".reveal").forEach((el, i) => {
     el.classList.remove("reveal--visible");
-    setTimeout(() => el.classList.add("reveal--visible"), 80 + i * 60);
+    setTimeout(() => el.classList.add("reveal--visible"), 60 + i * 50);
   });
 }
 
 function playRollSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const times = [0, 0.12, 0.28, 0.45, 0.62, 0.78];
-    times.forEach((t) => {
+    [0, 0.15, 0.35, 0.55, 0.75, 0.95].forEach((t) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = 800 + Math.random() * 600;
-      gain.gain.setValueAtTime(0.08, ctx.currentTime + t);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.08);
+      osc.frequency.value = 600 + Math.random() * 400;
+      gain.gain.setValueAtTime(0.05, ctx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.06);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(ctx.currentTime + t);
-      osc.stop(ctx.currentTime + t + 0.1);
+      osc.stop(ctx.currentTime + t + 0.07);
     });
   } catch {
     /* ignore */
   }
 }
 
-function vibrate() {
-  if (navigator.vibrate) navigator.vibrate([15, 30, 15]);
-}
-
-function spawnParticles() {
-  const burst = $("#particle-burst");
-  burst.innerHTML = "";
-  for (let i = 0; i < 24; i++) {
-    const p = document.createElement("span");
-    p.className = "particle";
-    const angle = (Math.PI * 2 * i) / 24;
-    const dist = 60 + Math.random() * 80;
-    p.style.setProperty("--tx", `${Math.cos(angle) * dist}px`);
-    p.style.setProperty("--ty", `${Math.sin(angle) * dist}px`);
-    p.style.animationDelay = `${Math.random() * 0.2}s`;
-    burst.appendChild(p);
-  }
-  burst.classList.add("particle-burst--active");
-  setTimeout(() => burst.classList.remove("particle-burst--active"), 1200);
-}
-
-function renderResultDice() {
-  const row = $("#result-dice-row");
-  row.innerHTML = "";
-  state.rolled.forEach((item) => {
-    const set = DICE_SETS.find((s) => s.id === item.setId);
-    const el = createDiceElement(set, {
-      size: "md",
-      word: item.word,
-      faceIndex: item.faceIndex,
-    });
-    row.appendChild(el);
+function animateWordReveal(words, container, onDone) {
+  container.innerHTML = "";
+  container.classList.add("word-reveal--active");
+  words.forEach((word, i) => {
+    setTimeout(() => {
+      const chip = document.createElement("span");
+      chip.className = "word-chip";
+      chip.textContent = word;
+      container.appendChild(chip);
+      if (i === words.length - 1) onDone?.();
+    }, i * 280);
   });
 }
 
 function renderResultContent() {
-  state.poem = generatePoem(state.wordMap);
-  const interpret = generateInterpretation(state.wordMap);
-  const words = state.rolled.map((r) => r.word);
+  state.words = state.rolled.map((r) => r.word);
+  state.bestPoem = generateBestPoem(state.wordMap);
+  state.bestOrder = getBestOrder(state.wordMap, state.words);
 
-  $("#ai-poem").textContent = state.poem;
-  $("#interpret-text").textContent = interpret;
+  $("#best-poem").textContent = "";
+  $("#best-poem").classList.remove("best-poem--visible");
+  $("#best-loading").hidden = true;
 
-  initTagDrag($("#tag-list"), words, (order) => {
-    state.customPoem = composeCustomPoem(order);
-    $("#custom-poem").textContent = state.customPoem;
+  renderMiniDice($("#result-dice-row"), state.rolled);
+
+  const revealEl = $("#word-reveal");
+  animateWordReveal(state.words, revealEl, () => {
+    revealEl.classList.remove("word-reveal--active");
+    state.tagCtrl = initTagDrag($("#tag-list"), state.words, (order, dragUsed) => {
+      state.customPoem = composeCustomPoem(order);
+      $("#custom-poem").textContent = state.customPoem;
+      if (dragUsed) track("drag_used");
+    });
   });
 
-  renderResultDice();
-  track("poem_generated", { words });
+  track("words_revealed", { words: state.words });
+}
+
+function showBestArrangement() {
+  if (!state.tagCtrl) return;
+  track("best_arrange_click");
+
+  const loading = $("#best-loading");
+  const poemEl = $("#best-poem");
+  loading.hidden = false;
+  poemEl.textContent = "";
+  poemEl.classList.remove("best-poem--visible");
+
+  setTimeout(() => {
+    state.tagCtrl.setOrder(state.bestOrder);
+    loading.hidden = true;
+    poemEl.textContent = state.bestPoem;
+    poemEl.classList.add("best-poem--visible");
+    track("best_arrange_shown", { poem: state.bestPoem });
+  }, BEST_ANIM_MS);
 }
 
 function startRoll() {
@@ -143,25 +145,14 @@ function startRoll() {
 
   const stage = $("#roll-dice-stage");
   renderDiceStage(stage, state.rolled);
-
   playRollSound();
-  vibrate();
 
   animateRoll(stage, state.rolled, () => {
-    spawnParticles();
     renderResultContent();
     switchScreen("result");
     state.isRolling = false;
     track("roll_complete", { words: state.rolled.map((r) => r.word) });
   });
-}
-
-function openSharePanel() {
-  $("#share-panel").hidden = false;
-}
-
-function closeSharePanel() {
-  $("#share-panel").hidden = true;
 }
 
 async function copyText(text) {
@@ -177,48 +168,14 @@ async function copyText(text) {
 
 function goPoster() {
   const canvas = $("#poster-canvas");
-  const words = state.rolled.map((r) => r.word);
-  renderPoster(canvas, { poem: state.poem, words, siteUrl: SITE_URL });
+  renderPoster(canvas, {
+    words: state.words,
+    bestPoem: state.bestPoem,
+    siteUrl: SITE_URL,
+  });
   getPosterPreviewScale(canvas, $("#poster-preview").clientWidth);
   switchScreen("share");
   track("poster_view");
-}
-
-function initStars() {
-  const canvas = $("#stars");
-  const ctx = canvas.getContext("2d");
-  let stars = [];
-  let w = 0;
-  let h = 0;
-
-  function resize() {
-    w = canvas.width = window.innerWidth;
-    h = canvas.height = window.innerHeight;
-    stars = Array.from({ length: 80 }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      r: Math.random() * 1.2 + 0.3,
-      a: Math.random(),
-      speed: Math.random() * 0.003 + 0.001,
-    }));
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, w, h);
-    stars.forEach((s) => {
-      s.a += s.speed;
-      const alpha = 0.2 + Math.abs(Math.sin(s.a)) * 0.5;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(143,216,255,${alpha})`;
-      ctx.fill();
-    });
-    requestAnimationFrame(draw);
-  }
-
-  resize();
-  draw();
-  window.addEventListener("resize", resize);
 }
 
 function bindActions() {
@@ -226,8 +183,7 @@ function bindActions() {
     const btn = e.target.closest("[data-action]");
     if (!btn) return;
 
-    const action = btn.dataset.action;
-    switch (action) {
+    switch (btn.dataset.action) {
       case "start-roll":
         track("start_roll_click");
         btn.classList.add("btn--pressed");
@@ -238,16 +194,15 @@ function bindActions() {
         track("roll_again_click");
         startRoll();
         break;
-      case "copy-poem":
-        copyText(state.poem);
-        track("poem_copy");
+      case "best-arrange":
+        showBestArrangement();
         break;
       case "save-poster":
         goPoster();
         track("save_poster_click");
         break;
       case "share-friend":
-        openSharePanel();
+        $("#share-panel").hidden = false;
         track("share_click");
         break;
       case "back-result":
@@ -255,29 +210,25 @@ function bindActions() {
         break;
       case "download-poster":
         downloadPoster($("#poster-canvas"));
-        showToast("诗卡已保存");
+        showToast("图片已保存");
         track("poster_download");
         break;
       case "copy-share-text":
-        copyText(getShareCopy(state.poem));
+        copyText(getShareCopy(state.words, state.bestPoem));
         track("share_copy");
         break;
       case "close-share":
-        closeSharePanel();
+        $("#share-panel").hidden = true;
         break;
       case "share-copy-link":
         copyText(SITE_URL);
         track("share_link_copy");
-        closeSharePanel();
+        $("#share-panel").hidden = true;
         break;
       case "share-copy-text":
-        copyText(getShareCopy(state.poem));
+        copyText(getShareCopy(state.words, state.bestPoem));
         track("share_text_copy");
-        closeSharePanel();
-        break;
-      case "share-save":
-        closeSharePanel();
-        goPoster();
+        $("#share-panel").hidden = true;
         break;
       default:
         break;
@@ -289,13 +240,12 @@ function init() {
   recordVisit();
   track("page_view", { screen: "home" });
 
-  renderDiceCluster($("#home-dice-cluster"), { size: "sm", floating: true });
+  renderDiceCluster($("#home-dice-cluster"), { count: 3, size: "sm", floating: true });
 
-  $$(".screen.screen--active .reveal").forEach((el, i) => {
-    setTimeout(() => el.classList.add("reveal--visible"), 100 + i * 80);
+  document.querySelectorAll(".screen.screen--active .reveal").forEach((el, i) => {
+    setTimeout(() => el.classList.add("reveal--visible"), 80 + i * 70);
   });
 
-  initStars();
   bindActions();
 }
 

@@ -45,65 +45,33 @@ function incrementRollCount() {
 }
 
 /* === poem.js === */
-const POEM_TEMPLATES = [
-  ({ nature, color, object, action, emotion }) =>
-    `${nature}${action}${color}${object}，\n而${emotion}，藏进了${object === "小猫" ? "小猫" : pickAlt(object)}的眼睛里。`,
-  ({ time, nature, color, emotion, action }) =>
-    `在${time}的${color}里，\n${nature}${action}，\n${emotion}悄悄经过。`,
-  ({ color, nature, object, emotion, time }) =>
-    `${color}的${nature}落在${object}上，\n${time}的你，正在${emotion}。`,
-  ({ object, nature, action, emotion, time }) =>
-    `${object}记得${nature}，\n${action}在${time}，\n${emotion}从未走远。`,
-  ({ nature, action, color, time, emotion }) =>
-    `${nature}${action}过${color}的${time}，\n${emotion}，像光一样轻。`,
+const BEST_TEMPLATES = [
+  ({ color, nature, action, object, emotion }) => {
+    const subject = object === "小猫" ? "小猫" : `那只${object}`;
+    return `${color}${nature}${action}${object}，\n${emotion}的${subject}终于抬起头。`;
+  },
+  ({ color, nature, action, object, time }) =>
+    `${color}${nature}${action}${object}，\n${time}的故事刚刚开始。`,
+  ({ nature, action, color, object, emotion }) =>
+    `${nature}${action}过${color}的${object}，\n${emotion}在角落里发芽。`,
+  ({ color, object, nature, action, emotion }) =>
+    `${color}${object}里，\n${nature}轻轻${action}，${emotion}有了名字。`,
+  ({ time, nature, color, action, object }) =>
+    `${time}的${color}${nature}，\n${action}向${object}，像一句玩笑话。`,
   ({ emotion, nature, object, action, color }) =>
-    `把${emotion}交给${nature}，\n让它${action}向${color}的${object}。`,
-  ({ time, emotion, nature, color, action }) =>
-    `${time}，${emotion}与${nature}相遇，\n在${color}中${action}，\n像一句未说完的话。`,
-  ({ color, object, nature, emotion, action }) =>
-    `${color}${object}里，\n${nature}轻轻${action}，\n${emotion}终于有了形状。`,
+    `把${emotion}交给${nature}，\n${action}过${color}的${object}。`,
+  ({ color, nature, object, action, time }) =>
+    `${color}${nature}停在${object}旁，\n${time}悄悄${action}。`,
+  ({ nature, color, action, emotion, object }) =>
+    `${nature}和${color}打了个照面，\n${action}之后，${emotion}住进了${object}。`,
 ];
-
-const INTERPRET_TEMPLATES = [
-  ({ emotion, nature, object }) =>
-    `你抽到的是：${emotion} × ${nature} × ${object}\n有些事情不是没有结果，只是还在来的路上。`,
-  ({ emotion, time, nature }) =>
-    `你抽到的是：${emotion} × ${time} × ${nature}\n宇宙想告诉你，该来的温柔，会在对的时间抵达。`,
-  ({ color, emotion, object }) =>
-    `你抽到的是：${color} × ${emotion} × ${object}\n你正在经历的，不是失去，而是换一种方式被记住。`,
-  ({ emotion, action, nature }) =>
-    `你抽到的是：${emotion} × ${action} × ${nature}\n允许自己慢下来，那些${action}过的，都会成为养分。`,
-  ({ time, emotion, object }) =>
-    `你抽到的是：${time} × ${emotion} × ${object}\n你不需要立刻有答案，感受本身就是最好的回应。`,
-  ({ nature, color, emotion }) =>
-    `你抽到的是：${nature} × ${color} × ${emotion}\n你比自己想象的更柔软，也更值得被好好对待。`,
-  ({ emotion, object, time }) =>
-    `你抽到的是：${emotion} × ${object} × ${time}\n有些告别不是结束，而是把心意安放在更安静的地方。`,
-  ({ nature, object, emotion }) =>
-    `你抽到的是：${nature} × ${object} × ${emotion}\n你正在靠近真实的自己，请相信这个过程。`,
-];
-
-const ALT_OBJECTS = ["灯塔", "车站", "信件", "冰川"];
-
-function pickAlt(obj) {
-  const alts = ALT_OBJECTS.filter((o) => o !== obj);
-  return alts[Math.floor(Math.random() * alts.length)];
-}
-
-function pick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
 
 function countChars(text) {
   return text.replace(/\s/g, "").length;
 }
 
-function formatPoem(text) {
-  return text.trim();
-}
-
-function generatePoem(wordMap) {
-  const vars = {
+function varsFromMap(wordMap) {
+  return {
     emotion: wordMap.emotion,
     time: wordMap.time,
     nature: wordMap.nature,
@@ -111,56 +79,43 @@ function generatePoem(wordMap) {
     object: wordMap.object,
     action: wordMap.action,
   };
+}
 
-  const shuffled = [...POEM_TEMPLATES].sort(() => Math.random() - 0.5);
+function generateBestPoem(wordMap) {
+  const vars = varsFromMap(wordMap);
+  const shuffled = [...BEST_TEMPLATES].sort(() => Math.random() - 0.5);
+
   for (const tpl of shuffled) {
-    const poem = formatPoem(tpl(vars));
+    const poem = tpl(vars).trim();
     const len = countChars(poem);
-    if (len >= 25 && len <= 45) return poem;
+    if (len >= 18 && len <= 36) return poem;
   }
 
-  const fallback = formatPoem(
-    `${vars.nature}${vars.action}${vars.color}${vars.object}，\n而${vars.emotion}，藏进了${vars.time}里。`
-  );
-  return fallback;
+  return `${vars.color}${vars.nature}${vars.action}${vars.object}，\n${vars.emotion}的${vars.object}终于抬起头。`;
 }
 
-function generateInterpretation(wordMap) {
-  const vars = {
-    emotion: wordMap.emotion,
-    time: wordMap.time,
-    nature: wordMap.nature,
-    color: wordMap.color,
-    object: wordMap.object,
-    action: wordMap.action,
-  };
-
-  const shuffled = [...INTERPRET_TEMPLATES].sort(() => Math.random() - 0.5);
-  for (const tpl of shuffled) {
-    const text = tpl(vars);
-    const len = countChars(text);
-    if (len >= 30 && len <= 60) return text;
-  }
-
-  return `你抽到的是：${vars.emotion} × ${vars.nature} × ${vars.object}\n宇宙想对你说，你值得被温柔地理解。`;
+function getBestOrder(wordMap, rolledWords) {
+  const v = varsFromMap(wordMap);
+  const ordered = [v.color, v.nature, v.action, v.object, v.emotion, v.time].filter(Boolean);
+  const unique = [...new Set(ordered)];
+  const rest = rolledWords.filter((w) => !unique.includes(w));
+  return [...unique, ...rest].slice(0, 6);
 }
 
-function composeCustomPoem(words, style = "line") {
+function composeCustomPoem(words) {
   if (!words.length) return "";
-  if (style === "line") {
-    const mid = Math.ceil(words.length / 2);
-    return `${words.slice(0, mid).join("")}\n${words.slice(mid).join("")}`;
-  }
-  return words.join(" ");
+  const mid = Math.ceil(words.length / 2);
+  return `${words.slice(0, mid).join("")}\n${words.slice(mid).join("")}`;
 }
 
-function getShareCopy(poem) {
-  return `${poem.replace(/\n/g, " ")}\n\n—— 来自《时间的诗》`;
+function getShareCopy(words, bestPoem) {
+  return `时间的诗\n\n我掷出了这组词：\n${words.join("｜")}\n\n它们最终组成：\n${bestPoem.replace(/\n/g, "")}\n\n你也来试试，看看你的词语会怎么排列`;
 }
 
 /* === drag.js === */
 function initTagDrag(container, words, onChange) {
   let order = [...words];
+  let dragUsed = false;
 
   function render() {
     container.innerHTML = "";
@@ -173,6 +128,7 @@ function initTagDrag(container, words, onChange) {
       tag.dataset.index = String(index);
 
       tag.addEventListener("dragstart", (e) => {
+        dragUsed = true;
         tag.classList.add("tag-card--dragging");
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", String(index));
@@ -204,7 +160,7 @@ function initTagDrag(container, words, onChange) {
         next.splice(to, 0, moved);
         order = next;
         render();
-        onChange(order);
+        onChange(order, dragUsed);
       });
 
       container.appendChild(tag);
@@ -212,62 +168,22 @@ function initTagDrag(container, words, onChange) {
   }
 
   render();
-  onChange(order);
-  return () => order;
+  onChange(order, false);
+
+  return {
+    getOrder: () => [...order],
+    setOrder: (next) => {
+      order = [...next];
+      render();
+      onChange(order, dragUsed);
+    },
+    wasDragUsed: () => dragUsed,
+  };
 }
 
 /* === poster.js === */
 const POSTER_W = 1080;
 const POSTER_H = 1920;
-
-function drawStarfield(ctx, w, h) {
-  const grad = ctx.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0, "#0F172A");
-  grad.addColorStop(0.45, "#1a2744");
-  grad.addColorStop(1, "#0F172A");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, w, h);
-
-  for (let i = 0; i < 120; i++) {
-    const x = Math.random() * w;
-    const y = Math.random() * h;
-    const r = Math.random() * 2 + 0.5;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.6 + 0.2})`;
-    ctx.fill();
-  }
-
-  const glow = ctx.createRadialGradient(w * 0.5, h * 0.35, 0, w * 0.5, h * 0.35, w * 0.6);
-  glow.addColorStop(0, "rgba(255,183,213,0.18)");
-  glow.addColorStop(0.5, "rgba(143,216,255,0.08)");
-  glow.addColorStop(1, "transparent");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, w, h);
-}
-
-function drawGlassCard(ctx, x, y, w, h) {
-  ctx.save();
-  ctx.beginPath();
-  const r = 32;
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-
-  ctx.fillStyle = "rgba(255,255,255,0.08)";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.25)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.restore();
-}
 
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
   const lines = text.split("\n");
@@ -293,66 +209,52 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
   return cy;
 }
 
-function drawQRPlaceholder(ctx, x, y, size) {
-  ctx.save();
-  ctx.fillStyle = "rgba(255,255,255,0.12)";
-  ctx.fillRect(x, y, size, size);
-  ctx.strokeStyle = "rgba(255,255,255,0.35)";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(x, y, size, size);
-
-  const cell = size / 7;
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  for (let r = 0; r < 7; r++) {
-    for (let c = 0; c < 7; c++) {
-      if ((r + c) % 2 === 0) ctx.fillRect(x + c * cell, y + r * cell, cell, cell);
-    }
-  }
-  ctx.restore();
-}
-
-function renderPoster(canvas, { poem, words, siteUrl }) {
+function renderPoster(canvas, { words, bestPoem, siteUrl }) {
   canvas.width = POSTER_W;
   canvas.height = POSTER_H;
   const ctx = canvas.getContext("2d");
   const w = POSTER_W;
   const h = POSTER_H;
 
-  drawStarfield(ctx, w, h);
+  ctx.fillStyle = "#FAFAFA";
+  ctx.fillRect(0, 0, w, h);
+
+  const glow = ctx.createRadialGradient(w * 0.5, h * 0.3, 0, w * 0.5, h * 0.3, w * 0.55);
+  glow.addColorStop(0, "rgba(217,242,255,0.5)");
+  glow.addColorStop(1, "transparent");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, w, h);
 
   ctx.textAlign = "center";
+  ctx.font = "500 56px 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "#1e293b";
+  ctx.fillText("时间的诗", w / 2, 200);
 
-  ctx.font = "500 52px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.fillText("时间的诗", w / 2, 180);
+  ctx.font = "300 32px 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "rgba(30,41,59,0.55)";
+  ctx.fillText("我掷出了这组词：", w / 2, 320);
 
-  ctx.font = "300 28px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(255,183,213,0.9)";
-  ctx.fillText(words.join(" · "), w / 2, 260);
+  ctx.font = "400 36px 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "#1e293b";
+  ctx.fillText(words.join("｜"), w / 2, 400);
 
-  const cardX = 80;
-  const cardY = 340;
-  const cardW = w - 160;
-  const cardH = 720;
-  drawGlassCard(ctx, cardX, cardY, cardW, cardH);
+  ctx.font = "300 32px 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "rgba(30,41,59,0.55)";
+  ctx.fillText("它们最终组成：", w / 2, 520);
 
-  ctx.textAlign = "left";
-  ctx.font = "400 56px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "#FFFFFF";
-  wrapText(ctx, poem, cardX + 48, cardY + 120, cardW - 96, 88);
+  ctx.font = "400 52px 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "#1e293b";
+  wrapText(ctx, bestPoem, 120, 620, w - 240, 84);
 
-  ctx.textAlign = "center";
-  ctx.font = "300 36px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.fillText("我掷出了这一首诗", w / 2, h - 420);
-  ctx.fillText("你会掷出什么？", w / 2, h - 360);
+  ctx.font = "300 34px 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "rgba(30,41,59,0.45)";
+  ctx.fillText("你也来试试", w / 2, h - 280);
+  ctx.fillText("看看你的词语会怎么排列", w / 2, h - 220);
 
-  drawQRPlaceholder(ctx, w / 2 - 80, h - 280, 160);
-
-  ctx.font="300 24px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
-  const url = siteUrl || window.location.href;
-  ctx.fillText(url.replace(/^https?:\/\//, ""), w / 2, h - 80);
+  ctx.font = "300 24px 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "rgba(30,41,59,0.3)";
+  const url = (siteUrl || window.location.href).replace(/^https?:\/\//, "");
+  ctx.fillText(url, w / 2, h - 80);
 
   return canvas;
 }
@@ -388,6 +290,8 @@ const FACE_TRANSFORMS = [
   "rotateX(90deg) translateZ(var(--half))",
   "rotateX(-90deg) translateZ(var(--half))",
 ];
+
+const ROLL_DURATION = 2500;
 
 function rollDice() {
   return DICE_SETS.map((set) => {
@@ -427,7 +331,6 @@ function createDiceElement(set, options = {}) {
     wrap.style.animationDelay = `${delay}s`;
   }
   wrap.dataset.setId = set.id;
-  wrap.dataset.label = set.label;
 
   const cube = document.createElement("div");
   cube.className = "dice-cube";
@@ -459,78 +362,104 @@ function getStoppedRotation(faceIndex) {
   return rotations[faceIndex] || rotations[0];
 }
 
-function renderDiceCluster(container, { size = "sm", floating = true } = {}) {
+function renderDiceCluster(container, { count = 3, size = "sm", floating = true } = {}) {
   container.innerHTML = "";
-  DICE_SETS.forEach((set, i) => {
-    container.appendChild(createDiceElement(set, { size, floating, delay: i * 0.35 }));
+  DICE_SETS.slice(0, count).forEach((set, i) => {
+    container.appendChild(createDiceElement(set, { size, floating, delay: i * 0.4 }));
   });
 }
 
-function renderDiceStage(container, rolled = null) {
+function renderDiceStage(container, rolled) {
   container.innerHTML = "";
   DICE_SETS.forEach((set, i) => {
-    const item = rolled?.find((r) => r.setId === set.id);
+    const item = rolled.find((r) => r.setId === set.id);
     const el = createDiceElement(set, {
       size: "lg",
       word: item?.word ?? null,
       faceIndex: item?.faceIndex ?? 0,
-      delay: i * 0.1,
     });
+    if (i >= 3) {
+      el.classList.add("dice-wrap--pending");
+    }
     container.appendChild(el);
   });
 }
 
 function animateRoll(container, rolled, onComplete) {
-  const cubes = container.querySelectorAll(".dice-cube");
-  const wraps = container.querySelectorAll(".dice-wrap");
+  const wraps = [...container.querySelectorAll(".dice-wrap")];
+  const cubes = [...container.querySelectorAll(".dice-cube")];
 
-  wraps.forEach((wrap) => wrap.classList.add("dice-wrap--rolling"));
-
-  cubes.forEach((cube, i) => {
-    cube.classList.add("dice-cube--spin");
-    cube.style.animationDelay = `${i * 0.08}s`;
+  wraps.forEach((wrap) => {
+    wrap.classList.add("dice-wrap--drop");
   });
 
   setTimeout(() => {
-    cubes.forEach((cube) => {
-      cube.classList.remove("dice-cube--spin");
-      cube.classList.add("dice-cube--bounce");
+    wraps.slice(0, 3).forEach((wrap, i) => {
+      wrap.querySelector(".dice-cube")?.classList.add("dice-cube--spin");
+      wrap.style.animationDelay = `${i * 0.05}s`;
     });
-  }, 1500);
+  }, 300);
+
+  setTimeout(() => {
+    wraps.slice(3).forEach((wrap, i) => {
+      wrap.classList.remove("dice-wrap--pending");
+      wrap.classList.add("dice-wrap--appear");
+      setTimeout(() => {
+        wrap.querySelector(".dice-cube")?.classList.add("dice-cube--spin");
+      }, i * 120);
+    });
+  }, 650);
+
+  const stopStart = 1100;
+  const stopGap = 200;
 
   cubes.forEach((cube, i) => {
     setTimeout(() => {
-      const item = rolled[i];
-      cube.classList.remove("dice-cube--bounce");
+      cube.classList.remove("dice-cube--spin");
       cube.classList.add("dice-cube--landed");
-      cube.style.transform = getStoppedRotation(item.faceIndex);
-      cube.dataset.face = String(item.faceIndex);
-
-    }, 1800 + i * 120);
+      cube.style.transform = getStoppedRotation(rolled[i].faceIndex);
+    }, stopStart + i * stopGap);
   });
 
-  const lastStop = 1800 + (cubes.length - 1) * 120 + 400;
   setTimeout(() => {
-    wraps.forEach((wrap) => wrap.classList.remove("dice-wrap--rolling"));
+    wraps.forEach((wrap) => {
+      wrap.classList.remove("dice-wrap--drop", "dice-wrap--appear");
+    });
     onComplete?.();
-  }, lastStop);
+  }, ROLL_DURATION);
+}
+
+function renderMiniDice(container, rolled) {
+  container.innerHTML = "";
+  rolled.forEach((item) => {
+    const set = DICE_SETS.find((s) => s.id === item.setId);
+    const el = createDiceElement(set, {
+      size: "xs",
+      word: item.word,
+      faceIndex: item.faceIndex,
+    });
+    container.appendChild(el);
+  });
 }
 
 /* === app.js === */
 const SITE_URL = window.location.href.split("?")[0];
-const PAGE_TRANSITION_MS = 600;
+const PAGE_TRANSITION_MS = 500;
+const BEST_ANIM_MS = 1500;
 
 const state = {
   screen: "home",
   rolled: [],
   wordMap: {},
-  poem: "",
+  words: [],
+  bestPoem: "",
+  bestOrder: [],
   customPoem: "",
   isRolling: false,
+  tagCtrl: null,
 };
 
 const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => document.querySelectorAll(sel);
 
 function showToast(msg) {
   const toast = $("#toast");
@@ -548,90 +477,90 @@ function switchScreen(name) {
   const next = $(`.screen[data-screen="${name}"]`);
 
   prev?.classList.remove("screen--active");
-  prev?.classList.add("screen--leaving");
-  setTimeout(() => prev?.classList.remove("screen--leaving"), PAGE_TRANSITION_MS);
-
   next?.classList.add("screen--active", "screen--entering");
   setTimeout(() => next?.classList.remove("screen--entering"), PAGE_TRANSITION_MS);
 
   state.screen = name;
   next?.querySelectorAll(".reveal").forEach((el, i) => {
     el.classList.remove("reveal--visible");
-    setTimeout(() => el.classList.add("reveal--visible"), 80 + i * 60);
+    setTimeout(() => el.classList.add("reveal--visible"), 60 + i * 50);
   });
 }
 
 function playRollSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const times = [0, 0.12, 0.28, 0.45, 0.62, 0.78];
-    times.forEach((t) => {
+    [0, 0.15, 0.35, 0.55, 0.75, 0.95].forEach((t) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = 800 + Math.random() * 600;
-      gain.gain.setValueAtTime(0.08, ctx.currentTime + t);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.08);
+      osc.frequency.value = 600 + Math.random() * 400;
+      gain.gain.setValueAtTime(0.05, ctx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.06);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(ctx.currentTime + t);
-      osc.stop(ctx.currentTime + t + 0.1);
+      osc.stop(ctx.currentTime + t + 0.07);
     });
   } catch {
     /* ignore */
   }
 }
 
-function vibrate() {
-  if (navigator.vibrate) navigator.vibrate([15, 30, 15]);
-}
-
-function spawnParticles() {
-  const burst = $("#particle-burst");
-  burst.innerHTML = "";
-  for (let i = 0; i < 24; i++) {
-    const p = document.createElement("span");
-    p.className = "particle";
-    const angle = (Math.PI * 2 * i) / 24;
-    const dist = 60 + Math.random() * 80;
-    p.style.setProperty("--tx", `${Math.cos(angle) * dist}px`);
-    p.style.setProperty("--ty", `${Math.sin(angle) * dist}px`);
-    p.style.animationDelay = `${Math.random() * 0.2}s`;
-    burst.appendChild(p);
-  }
-  burst.classList.add("particle-burst--active");
-  setTimeout(() => burst.classList.remove("particle-burst--active"), 1200);
-}
-
-function renderResultDice() {
-  const row = $("#result-dice-row");
-  row.innerHTML = "";
-  state.rolled.forEach((item) => {
-    const set = DICE_SETS.find((s) => s.id === item.setId);
-    const el = createDiceElement(set, {
-      size: "md",
-      word: item.word,
-      faceIndex: item.faceIndex,
-    });
-    row.appendChild(el);
+function animateWordReveal(words, container, onDone) {
+  container.innerHTML = "";
+  container.classList.add("word-reveal--active");
+  words.forEach((word, i) => {
+    setTimeout(() => {
+      const chip = document.createElement("span");
+      chip.className = "word-chip";
+      chip.textContent = word;
+      container.appendChild(chip);
+      if (i === words.length - 1) onDone?.();
+    }, i * 280);
   });
 }
 
 function renderResultContent() {
-  state.poem = generatePoem(state.wordMap);
-  const interpret = generateInterpretation(state.wordMap);
-  const words = state.rolled.map((r) => r.word);
+  state.words = state.rolled.map((r) => r.word);
+  state.bestPoem = generateBestPoem(state.wordMap);
+  state.bestOrder = getBestOrder(state.wordMap, state.words);
 
-  $("#ai-poem").textContent = state.poem;
-  $("#interpret-text").textContent = interpret;
+  $("#best-poem").textContent = "";
+  $("#best-poem").classList.remove("best-poem--visible");
+  $("#best-loading").hidden = true;
 
-  initTagDrag($("#tag-list"), words, (order) => {
-    state.customPoem = composeCustomPoem(order);
-    $("#custom-poem").textContent = state.customPoem;
+  renderMiniDice($("#result-dice-row"), state.rolled);
+
+  const revealEl = $("#word-reveal");
+  animateWordReveal(state.words, revealEl, () => {
+    revealEl.classList.remove("word-reveal--active");
+    state.tagCtrl = initTagDrag($("#tag-list"), state.words, (order, dragUsed) => {
+      state.customPoem = composeCustomPoem(order);
+      $("#custom-poem").textContent = state.customPoem;
+      if (dragUsed) track("drag_used");
+    });
   });
 
-  renderResultDice();
-  track("poem_generated", { words });
+  track("words_revealed", { words: state.words });
+}
+
+function showBestArrangement() {
+  if (!state.tagCtrl) return;
+  track("best_arrange_click");
+
+  const loading = $("#best-loading");
+  const poemEl = $("#best-poem");
+  loading.hidden = false;
+  poemEl.textContent = "";
+  poemEl.classList.remove("best-poem--visible");
+
+  setTimeout(() => {
+    state.tagCtrl.setOrder(state.bestOrder);
+    loading.hidden = true;
+    poemEl.textContent = state.bestPoem;
+    poemEl.classList.add("best-poem--visible");
+    track("best_arrange_shown", { poem: state.bestPoem });
+  }, BEST_ANIM_MS);
 }
 
 function startRoll() {
@@ -648,25 +577,14 @@ function startRoll() {
 
   const stage = $("#roll-dice-stage");
   renderDiceStage(stage, state.rolled);
-
   playRollSound();
-  vibrate();
 
   animateRoll(stage, state.rolled, () => {
-    spawnParticles();
     renderResultContent();
     switchScreen("result");
     state.isRolling = false;
     track("roll_complete", { words: state.rolled.map((r) => r.word) });
   });
-}
-
-function openSharePanel() {
-  $("#share-panel").hidden = false;
-}
-
-function closeSharePanel() {
-  $("#share-panel").hidden = true;
 }
 
 async function copyText(text) {
@@ -682,48 +600,14 @@ async function copyText(text) {
 
 function goPoster() {
   const canvas = $("#poster-canvas");
-  const words = state.rolled.map((r) => r.word);
-  renderPoster(canvas, { poem: state.poem, words, siteUrl: SITE_URL });
+  renderPoster(canvas, {
+    words: state.words,
+    bestPoem: state.bestPoem,
+    siteUrl: SITE_URL,
+  });
   getPosterPreviewScale(canvas, $("#poster-preview").clientWidth);
   switchScreen("share");
   track("poster_view");
-}
-
-function initStars() {
-  const canvas = $("#stars");
-  const ctx = canvas.getContext("2d");
-  let stars = [];
-  let w = 0;
-  let h = 0;
-
-  function resize() {
-    w = canvas.width = window.innerWidth;
-    h = canvas.height = window.innerHeight;
-    stars = Array.from({ length: 80 }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      r: Math.random() * 1.2 + 0.3,
-      a: Math.random(),
-      speed: Math.random() * 0.003 + 0.001,
-    }));
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, w, h);
-    stars.forEach((s) => {
-      s.a += s.speed;
-      const alpha = 0.2 + Math.abs(Math.sin(s.a)) * 0.5;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(143,216,255,${alpha})`;
-      ctx.fill();
-    });
-    requestAnimationFrame(draw);
-  }
-
-  resize();
-  draw();
-  window.addEventListener("resize", resize);
 }
 
 function bindActions() {
@@ -731,8 +615,7 @@ function bindActions() {
     const btn = e.target.closest("[data-action]");
     if (!btn) return;
 
-    const action = btn.dataset.action;
-    switch (action) {
+    switch (btn.dataset.action) {
       case "start-roll":
         track("start_roll_click");
         btn.classList.add("btn--pressed");
@@ -743,16 +626,15 @@ function bindActions() {
         track("roll_again_click");
         startRoll();
         break;
-      case "copy-poem":
-        copyText(state.poem);
-        track("poem_copy");
+      case "best-arrange":
+        showBestArrangement();
         break;
       case "save-poster":
         goPoster();
         track("save_poster_click");
         break;
       case "share-friend":
-        openSharePanel();
+        $("#share-panel").hidden = false;
         track("share_click");
         break;
       case "back-result":
@@ -760,29 +642,25 @@ function bindActions() {
         break;
       case "download-poster":
         downloadPoster($("#poster-canvas"));
-        showToast("诗卡已保存");
+        showToast("图片已保存");
         track("poster_download");
         break;
       case "copy-share-text":
-        copyText(getShareCopy(state.poem));
+        copyText(getShareCopy(state.words, state.bestPoem));
         track("share_copy");
         break;
       case "close-share":
-        closeSharePanel();
+        $("#share-panel").hidden = true;
         break;
       case "share-copy-link":
         copyText(SITE_URL);
         track("share_link_copy");
-        closeSharePanel();
+        $("#share-panel").hidden = true;
         break;
       case "share-copy-text":
-        copyText(getShareCopy(state.poem));
+        copyText(getShareCopy(state.words, state.bestPoem));
         track("share_text_copy");
-        closeSharePanel();
-        break;
-      case "share-save":
-        closeSharePanel();
-        goPoster();
+        $("#share-panel").hidden = true;
         break;
       default:
         break;
@@ -794,13 +672,12 @@ function init() {
   recordVisit();
   track("page_view", { screen: "home" });
 
-  renderDiceCluster($("#home-dice-cluster"), { size: "sm", floating: true });
+  renderDiceCluster($("#home-dice-cluster"), { count: 3, size: "sm", floating: true });
 
-  $$(".screen.screen--active .reveal").forEach((el, i) => {
-    setTimeout(() => el.classList.add("reveal--visible"), 100 + i * 80);
+  document.querySelectorAll(".screen.screen--active .reveal").forEach((el, i) => {
+    setTimeout(() => el.classList.add("reveal--visible"), 80 + i * 70);
   });
 
-  initStars();
   bindActions();
 }
 

@@ -1,5 +1,6 @@
 export function initTagDrag(container, words, onChange) {
   let order = [...words];
+  let dragUsed = false;
 
   function render() {
     container.innerHTML = "";
@@ -12,6 +13,7 @@ export function initTagDrag(container, words, onChange) {
       tag.dataset.index = String(index);
 
       tag.addEventListener("dragstart", (e) => {
+        dragUsed = true;
         tag.classList.add("tag-card--dragging");
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", String(index));
@@ -43,7 +45,7 @@ export function initTagDrag(container, words, onChange) {
         next.splice(to, 0, moved);
         order = next;
         render();
-        onChange(order);
+        onChange(order, dragUsed);
       });
 
       container.appendChild(tag);
@@ -51,6 +53,15 @@ export function initTagDrag(container, words, onChange) {
   }
 
   render();
-  onChange(order);
-  return () => order;
+  onChange(order, false);
+
+  return {
+    getOrder: () => [...order],
+    setOrder: (next) => {
+      order = [...next];
+      render();
+      onChange(order, dragUsed);
+    },
+    wasDragUsed: () => dragUsed,
+  };
 }
