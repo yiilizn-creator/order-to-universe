@@ -28,7 +28,12 @@ const state = {
   answer: null,
   screen: "welcome",
   showReminder: false,
+  posterDataUrl: null,
+  posterDrawing: false,
 };
+
+let exportCanvas = null;
+let posterDrawPromise = null;
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -345,18 +350,53 @@ async function copyText(text) {
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;
   });
 }
 
+async function loadQrCodeImage(text) {
+  const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&bgcolor=060816&color=f6f7fb&data=${encodeURIComponent(text)}`;
+  const res = await fetch(apiUrl);
+  if (!res.ok) throw new Error("qr fetch failed");
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    return await loadImage(objectUrl);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function getExportCanvas() {
+  if (!exportCanvas) {
+    exportCanvas = document.createElement("canvas");
+  }
+  return exportCanvas;
+}
+
+function setPosterSaveEnabled(enabled) {
+  const btn = $("#save-poster-btn");
+  if (btn) btn.disabled = !enabled;
+}
+
+function showPosterImage(dataUrl) {
+  const imgEl = $("#poster-image");
+  const canvasEl = $("#poster-canvas");
+  state.posterDataUrl = dataUrl;
+  imgEl.src = dataUrl;
+  imgEl.hidden = false;
+  canvasEl.hidden = true;
+  setPosterSaveEnabled(true);
+}
+
 function drawDivider(ctx, w, y) {
-  ctx.strokeStyle = "rgba(181, 140, 255, 0.25)";
+  ctx.strokeStyle = "rgba(181, 140, 255, 0.2)";
+  ctx.lineWidth = 0.5;
   ctx.beginPath();
-  ctx.moveTo(w / 2 - 48, y);
-  ctx.lineTo(w / 2 + 48, y);
+  ctx.moveTo(w / 2 - 40, y);
+  ctx.lineTo(w / 2 + 40, y);
   ctx.stroke();
 }
 
@@ -388,30 +428,73 @@ function measureWrapText(ctx, text, maxWidth, lineHeight) {
   return cy;
 }
 
+const POSTER_TYPE = {
+  padX: 32,
+  padTop: 36,
+  title: "500 18px 'Noto Sans SC', sans-serif",
+  titleGap: 22,
+  dividerGap: 26,
+  label: "300 11px 'Noto Sans SC', sans-serif",
+  labelGap: 20,
+  truth: "400 17px 'Noto Sans SC', sans-serif",
+  truthLineHeight: 28,
+  truthGap: 28,
+  keyword: "400 14px 'Noto Sans SC', sans-serif",
+  keywordGap: 28,
+  guide: "300 13px 'Noto Sans SC', sans-serif",
+  guideLineHeight: 22,
+  guideGap: 10,
+  qrRatio: 0.34,
+  scan: "300 10px 'Noto Sans SC', sans-serif",
+  scanGap: 18,
+  brand: "300 10px 'Noto Sans SC', sans-serif",
+  brandGap: 28,
+};
+
 function calcPosterHeight(ctx, w) {
-  const padX = 28;
-  const contentW = w - padX * 2;
-  ctx.font = "400 22px 'Noto Sans SC', sans-serif";
-  const truthH = measureWrapText(ctx, state.answer.oneLine, contentW, 34);
-  const qrSize = Math.round(w * 0.38);
-  return 44 + 36 + 28 + 22 + truthH + 36 + 22 + 28 + 40 + 3 * 26 + 20 + qrSize + 48;
+  const contentW = w - POSTER_TYPE.padX * 2;
+  ctx.font = POSTER_TYPE.truth;
+  const truthH = measureWrapText(ctx, state.answer.oneLine, contentW, POSTER_TYPE.truthLineHeight);
+  const qrSize = Math.round(w * POSTER_TYPE.qrRatio);
+  const t = POSTER_TYPE;
+  return (
+    t.padTop +
+    t.titleGap +
+    t.dividerGap +
+    t.labelGap +
+    truthH +
+    t.truthGap +
+    t.labelGap +
+    t.keywordGap +
+    t.dividerGap +
+    3 * t.guideLineHeight +
+    t.guideGap +
+    qrSize +
+    t.scanGap +
+    t.brandGap
+  );
 }
 
 async function drawPoster() {
-  const canvas = $("#poster-canvas");
+  if (posterDrawPromise) return posterDrawPromise;
+
+  posterDrawPromise = (async () => {
+  state.posterDrawing = true;
+  setPosterSaveEnabled(false);
+
+  const canvas = getExportCanvas();
   const ctx = canvas.getContext("2d");
   const w = getPosterWidth();
-  const padX = 28;
+  const padX = POSTER_TYPE.padX;
   const contentW = w - padX * 2;
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const t = POSTER_TYPE;
 
-  ctx.font = "400 22px 'Noto Sans SC', sans-serif";
+  ctx.font = t.truth;
   const h = calcPosterHeight(ctx, w);
 
   canvas.width = Math.round(w * dpr);
   canvas.height = Math.round(h * dpr);
-  canvas.style.width = `${w}px`;
-  canvas.style.height = `${h}px`;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   const bg = ctx.createLinearGradient(0, 0, 0, h);
@@ -432,52 +515,50 @@ async function drawPoster() {
   }
 
   ctx.textAlign = "center";
-  let y = 44;
+  let y = t.padTop;
 
   ctx.fillStyle = "#f6d17a";
-  ctx.font = "500 24px 'Noto Sans SC', sans-serif";
+  ctx.font = t.title;
   ctx.fillText(`宇宙回信 No.${formatDisplayNo()}`, w / 2, y);
-  y += 28;
+  y += t.titleGap;
   drawDivider(ctx, w, y);
-  y += 36;
+  y += t.dividerGap;
 
-  ctx.fillStyle = "rgba(181, 140, 255, 0.9)";
-  ctx.font = "300 13px 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "rgba(181, 140, 255, 0.85)";
+  ctx.font = t.label;
   ctx.fillText("「一句话真相」", w / 2, y);
-  y += 28;
+  y += t.labelGap;
 
   ctx.fillStyle = "#7de2ff";
-  ctx.font = "400 22px 'Noto Sans SC', sans-serif";
-  const truthEndY = wrapText(ctx, state.answer.oneLine, w / 2, y, contentW, 34);
-  y = truthEndY + 36;
+  ctx.font = t.truth;
+  const truthEndY = wrapText(ctx, state.answer.oneLine, w / 2, y, contentW, t.truthLineHeight);
+  y = truthEndY + t.truthGap;
 
-  ctx.fillStyle = "rgba(246, 247, 251, 0.55)";
-  ctx.font = "300 13px 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "rgba(246, 247, 251, 0.5)";
+  ctx.font = t.label;
   ctx.fillText("✨ 今日宇宙关键词", w / 2, y);
-  y += 26;
+  y += t.labelGap;
 
   ctx.fillStyle = "#f6d17a";
-  ctx.font = "400 17px 'Noto Sans SC', sans-serif";
+  ctx.font = t.keyword;
   ctx.fillText(state.answer.keywords.join(" · "), w / 2, y);
-  y += 40;
+  y += t.keywordGap;
   drawDivider(ctx, w, y);
-  y += 36;
+  y += t.dividerGap;
 
-  ctx.fillStyle = "rgba(246, 247, 251, 0.75)";
-  ctx.font = "300 16px 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "rgba(246, 247, 251, 0.65)";
+  ctx.font = t.guide;
   ["输入一个问题", "再输入一个数字", "看看宇宙会回你什么"].forEach((line) => {
     ctx.fillText(line, w / 2, y);
-    y += 26;
+    y += t.guideLineHeight;
   });
 
-  y += 12;
-  const qrSize = Math.round(w * 0.38);
+  y += t.guideGap;
+  const qrSize = Math.round(w * t.qrRatio);
   const qrX = w / 2 - qrSize / 2;
 
   try {
-    const qrImg = await loadImage(
-      `https://api.qrserver.com/v1/create-qr-code/?size=400x400&bgcolor=060816&color=f6f7fb&data=${encodeURIComponent(getPosterQrUrl())}`
-    );
+    const qrImg = await loadQrCodeImage(getPosterQrUrl());
     ctx.fillStyle = "rgba(246, 247, 251, 0.08)";
     ctx.fillRect(qrX - 10, y - 10, qrSize + 20, qrSize + 20);
     ctx.drawImage(qrImg, qrX, y, qrSize, qrSize);
@@ -485,17 +566,37 @@ async function drawPoster() {
     ctx.strokeStyle = "rgba(246, 247, 251, 0.25)";
     ctx.strokeRect(qrX, y, qrSize, qrSize);
     ctx.fillStyle = "rgba(246, 247, 251, 0.35)";
-    ctx.font = "300 12px 'Noto Sans SC', sans-serif";
+    ctx.font = t.scan;
     ctx.fillText("扫码体验", w / 2, y + qrSize / 2 + 4);
   }
 
-  ctx.fillStyle = "rgba(246, 247, 251, 0.45)";
-  ctx.font = "300 11px 'Noto Sans SC', sans-serif";
-  ctx.fillText("扫码体验", w / 2, y + qrSize + 24);
+  ctx.fillStyle = "rgba(246, 247, 251, 0.4)";
+  ctx.font = t.scan;
+  ctx.fillText("扫码体验", w / 2, y + qrSize + t.scanGap);
 
-  ctx.fillStyle = "#b58cff";
-  ctx.font = "300 12px 'Noto Sans SC', sans-serif";
-  ctx.fillText("向宇宙下单", w / 2, y + qrSize + 44);
+  ctx.fillStyle = "rgba(181, 140, 255, 0.75)";
+  ctx.font = t.brand;
+  ctx.fillText("向宇宙下单", w / 2, y + qrSize + t.scanGap + t.brandGap);
+
+  try {
+    const dataUrl = canvas.toDataURL("image/png");
+    showPosterImage(dataUrl);
+  } catch (err) {
+    console.error("海报导出失败", err);
+    showToast("海报生成失败，请重试");
+    setPosterSaveEnabled(false);
+  } finally {
+    state.posterDrawing = false;
+  }
+
+  return state.posterDataUrl;
+  })();
+
+  try {
+    return await posterDrawPromise;
+  } finally {
+    posterDrawPromise = null;
+  }
 }
 
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
@@ -589,15 +690,29 @@ async function copyShareCopy() {
   }
 }
 
-function savePoster() {
-  const canvas = $("#poster-canvas");
-  const link = document.createElement("a");
-  link.download = `宇宙回信-No${formatDisplayNo()}.png`;
-  link.href = canvas.toDataURL("image/png");
-  link.click();
-  showToast("图片已保存");
-  track("poster_save", { result_id: getResultId() });
-  track("share_success", { result_id: getResultId(), type: "save" });
+async function savePoster() {
+  if (!state.posterDataUrl) {
+    await drawPoster();
+  }
+  if (!state.posterDataUrl) {
+    showToast("海报未就绪，请稍候再试");
+    return;
+  }
+
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  try {
+    const link = document.createElement("a");
+    link.download = `宇宙回信-No${formatDisplayNo()}.png`;
+    link.href = state.posterDataUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(isMobile ? "若未自动保存，请长按海报图片" : "图片已保存");
+    track("poster_save", { result_id: getResultId() });
+    track("share_success", { result_id: getResultId(), type: "save" });
+  } catch {
+    showToast("请长按海报图片保存");
+  }
 }
 
 function initCosmos() {
@@ -676,10 +791,11 @@ function initCosmos() {
   });
 }
 
+let resizePosterTimer = null;
 function handleResize() {
-  if (state.screen === "poster" && state.answer) {
-    drawPoster();
-  }
+  if (state.screen !== "poster" || !state.answer) return;
+  clearTimeout(resizePosterTimer);
+  resizePosterTimer = setTimeout(() => drawPoster(), 200);
 }
 
 function bindEvents() {
@@ -752,7 +868,7 @@ function bindEvents() {
         closeWeChatGuide();
         break;
       case "save-poster":
-        savePoster();
+        await savePoster();
         break;
       case "copy-copy":
         await copyShareCopy();

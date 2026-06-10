@@ -468,11 +468,21 @@ body {
   line-height: 0;
 }
 
-#poster-canvas {
+#poster-canvas,
+.poster-image {
   width: 100% !important;
   height: auto !important;
   display: block;
   vertical-align: top;
+  -webkit-touch-callout: default;
+  user-select: auto;
+}
+
+.poster-save-hint {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-align: center;
+  margin-bottom: 16px;
 }
 
 .actions--poster {

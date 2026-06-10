@@ -127,10 +127,12 @@
         <div class="screen-content poster-content">
           <button class="poster-back reveal" type="button" data-action="back-result" aria-label="返回结果页">← 返回</button>
           <div class="poster-preview" id="poster-preview">
-            <canvas id="poster-canvas"></canvas>
+            <canvas id="poster-canvas" hidden></canvas>
+            <img id="poster-image" class="poster-image" alt="宇宙回信分享海报" hidden />
           </div>
+          <p class="poster-save-hint">也可长按海报图片保存到相册</p>
           <div class="actions actions--poster">
-            <button class="btn btn-primary btn-block" type="button" data-action="save-poster">保存图片</button>
+            <button class="btn btn-primary btn-block" type="button" data-action="save-poster" id="save-poster-btn">保存图片</button>
             <button class="btn btn-secondary btn-block" type="button" data-action="copy-copy">复制文案</button>
           </div>
         </div>
