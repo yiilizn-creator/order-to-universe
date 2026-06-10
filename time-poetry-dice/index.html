@@ -45,14 +45,15 @@
       <!-- 结果页 -->
       <section class="screen" data-screen="result">
         <div class="screen-content result-content">
-          <div class="result-dice-mini reveal" id="result-dice-row"></div>
-
           <div class="arrange-core reveal">
             <h2 class="module-title">你会怎么排列？</h2>
-            <div class="word-reveal" id="word-reveal" aria-live="polite"></div>
-            <div class="tag-list" id="tag-list"></div>
+            <p class="module-hint">拖拽骰子，排出你的顺序</p>
+            <div class="dice-row dice-row--draggable" id="result-dice-row"></div>
             <p class="custom-preview" id="custom-poem"></p>
-            <button class="btn btn-soft" type="button" data-action="best-arrange">看看最佳排列</button>
+            <button class="btn btn-soft" type="button" data-action="best-arrange">显示最佳排列</button>
+          </div>
+
+          <div class="best-panel" id="best-panel">
             <p class="best-loading" id="best-loading" hidden>正在寻找最合适的位置…</p>
             <p class="best-poem" id="best-poem"></p>
           </div>

@@ -282,6 +282,62 @@ body {
   transform-origin: center top;
 }
 
+.dice-row--draggable {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(12px, 3.5vw, 20px);
+  width: 100%;
+  max-width: 360px;
+  margin: 8px 0 4px;
+  justify-items: center;
+}
+
+.dice-wrap--draggable {
+  cursor: grab;
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms;
+}
+
+.dice-wrap--draggable:active {
+  cursor: grabbing;
+}
+
+.dice-wrap--dragging {
+  opacity: 0.45;
+  transform: scale(0.94);
+}
+
+.dice-wrap--over {
+  transform: scale(1.05);
+}
+
+.dice-wrap--over .dice-cube {
+  filter: drop-shadow(0 0 10px rgba(255, 183, 213, 0.45));
+}
+
+.module-hint {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: -8px;
+}
+
+.best-panel {
+  width: 100%;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 650ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 500ms ease,
+    padding 500ms ease;
+  padding: 0;
+  text-align: center;
+}
+
+.best-panel--open {
+  max-height: 320px;
+  opacity: 1;
+  padding: 8px 0 16px;
+}
+
 .arrange-core {
   flex: 1;
   display: flex;
@@ -299,70 +355,13 @@ body {
   letter-spacing: 0.12em;
 }
 
-.word-reveal {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  min-height: 0;
-  margin-bottom: 4px;
-}
-
-.word-reveal:not(.word-reveal--active) {
-  display: none;
-}
-
-.word-chip {
-  font-size: 0.9rem;
-  color: var(--text-dim);
-  opacity: 0;
-  animation: chip-in 0.4s ease forwards;
-}
-
-@keyframes chip-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  min-height: 44px;
-  width: 100%;
-}
-
-.tag-card {
-  padding: 10px 18px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 216, 236, 0.8);
-  background: var(--pink);
-  font-size: 0.95rem;
-  color: var(--text);
-  cursor: grab;
-  font-family: inherit;
-  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms;
-}
-
-.tag-card:active { cursor: grabbing; }
-
-.tag-card--dragging {
-  opacity: 0.45;
-  transform: scale(0.96);
-}
-
-.tag-card--over {
-  box-shadow: 0 0 0 2px var(--ice);
-  transform: scale(1.04);
-}
-
 .custom-preview {
   font-size: 1rem;
   line-height: 1.7;
   white-space: pre-line;
   color: var(--text-dim);
   min-height: 1.7em;
+  width: 100%;
 }
 
 .btn-soft {
@@ -395,14 +394,15 @@ body {
 .best-poem {
   font-size: var(--poem-size);
   line-height: 1.6;
-  font-weight: 400;
+  font-weight: 500;
   white-space: pre-line;
   color: var(--text);
   text-align: center;
-  max-width: 100%;
+  width: 85%;
+  margin: 0 auto;
   opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 600ms ease, transform 600ms ease;
+  transform: translateY(10px);
+  transition: opacity 600ms ease 200ms, transform 600ms ease 200ms;
 }
 
 .best-poem--visible {

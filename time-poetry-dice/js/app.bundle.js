@@ -113,46 +113,44 @@ function getShareCopy(words, bestPoem) {
 }
 
 /* === drag.js === */
-function initTagDrag(container, words, onChange) {
-  let order = [...words];
+function initDiceDrag(container, rolledItems, createItemEl, onChange) {
+  let order = [...rolledItems];
   let dragUsed = false;
 
   function render() {
     container.innerHTML = "";
-    order.forEach((word, index) => {
-      const tag = document.createElement("button");
-      tag.type = "button";
-      tag.className = "tag-card";
-      tag.textContent = word;
-      tag.draggable = true;
-      tag.dataset.index = String(index);
+    order.forEach((item, index) => {
+      const el = createItemEl(item);
+      el.draggable = true;
+      el.dataset.index = String(index);
+      el.classList.add("dice-wrap--draggable");
 
-      tag.addEventListener("dragstart", (e) => {
+      el.addEventListener("dragstart", (e) => {
         dragUsed = true;
-        tag.classList.add("tag-card--dragging");
+        el.classList.add("dice-wrap--dragging");
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", String(index));
       });
 
-      tag.addEventListener("dragend", () => {
-        tag.classList.remove("tag-card--dragging");
+      el.addEventListener("dragend", () => {
+        el.classList.remove("dice-wrap--dragging");
       });
 
-      tag.addEventListener("dragover", (e) => {
+      el.addEventListener("dragover", (e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
-        tag.classList.add("tag-card--over");
+        el.classList.add("dice-wrap--over");
       });
 
-      tag.addEventListener("dragleave", () => {
-        tag.classList.remove("tag-card--over");
+      el.addEventListener("dragleave", () => {
+        el.classList.remove("dice-wrap--over");
       });
 
-      tag.addEventListener("drop", (e) => {
+      el.addEventListener("drop", (e) => {
         e.preventDefault();
-        tag.classList.remove("tag-card--over");
+        el.classList.remove("dice-wrap--over");
         const from = Number(e.dataTransfer.getData("text/plain"));
-        const to = Number(tag.dataset.index);
+        const to = Number(el.dataset.index);
         if (from === to) return;
 
         const next = [...order];
@@ -160,22 +158,24 @@ function initTagDrag(container, words, onChange) {
         next.splice(to, 0, moved);
         order = next;
         render();
-        onChange(order, dragUsed);
+        onChange(order.map((i) => i.word), dragUsed);
       });
 
-      container.appendChild(tag);
+      container.appendChild(el);
     });
   }
 
   render();
-  onChange(order, false);
+  onChange(order.map((i) => i.word), false);
 
   return {
-    getOrder: () => [...order],
-    setOrder: (next) => {
-      order = [...next];
+    getOrder: () => order.map((i) => i.word),
+    setOrder: (words) => {
+      order = words
+        .map((word) => order.find((i) => i.word === word) || rolledItems.find((i) => i.word === word))
+        .filter(Boolean);
       render();
-      onChange(order, dragUsed);
+      onChange(order.map((i) => i.word), dragUsed);
     },
     wasDragUsed: () => dragUsed,
   };
@@ -454,9 +454,9 @@ const state = {
   words: [],
   bestPoem: "",
   bestOrder: [],
-  customPoem: "",
   isRolling: false,
-  tagCtrl: null,
+  diceCtrl: null,
+  bestRevealed: false,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -506,17 +506,12 @@ function playRollSound() {
   }
 }
 
-function animateWordReveal(words, container, onDone) {
-  container.innerHTML = "";
-  container.classList.add("word-reveal--active");
-  words.forEach((word, i) => {
-    setTimeout(() => {
-      const chip = document.createElement("span");
-      chip.className = "word-chip";
-      chip.textContent = word;
-      container.appendChild(chip);
-      if (i === words.length - 1) onDone?.();
-    }, i * 280);
+function createResultDice(item) {
+  const set = DICE_SETS.find((s) => s.id === item.setId);
+  return createDiceElement(set, {
+    size: "md",
+    word: item.word,
+    faceIndex: item.faceIndex,
   });
 }
 
@@ -524,41 +519,53 @@ function renderResultContent() {
   state.words = state.rolled.map((r) => r.word);
   state.bestPoem = generateBestPoem(state.wordMap);
   state.bestOrder = getBestOrder(state.wordMap, state.words);
+  state.bestRevealed = false;
 
+  const bestPanel = $("#best-panel");
+  bestPanel.classList.remove("best-panel--open");
   $("#best-poem").textContent = "";
   $("#best-poem").classList.remove("best-poem--visible");
   $("#best-loading").hidden = true;
 
-  renderMiniDice($("#result-dice-row"), state.rolled);
+  const btn = document.querySelector('[data-action="best-arrange"]');
+  if (btn) btn.hidden = false;
 
-  const revealEl = $("#word-reveal");
-  animateWordReveal(state.words, revealEl, () => {
-    revealEl.classList.remove("word-reveal--active");
-    state.tagCtrl = initTagDrag($("#tag-list"), state.words, (order, dragUsed) => {
-      state.customPoem = composeCustomPoem(order);
-      $("#custom-poem").textContent = state.customPoem;
+  state.diceCtrl = initDiceDrag(
+    $("#result-dice-row"),
+    state.rolled,
+    createResultDice,
+    (order, dragUsed) => {
+      $("#custom-poem").textContent = composeCustomPoem(order);
       if (dragUsed) track("drag_used");
-    });
-  });
+    }
+  );
 
   track("words_revealed", { words: state.words });
 }
 
 function showBestArrangement() {
-  if (!state.tagCtrl) return;
+  if (!state.diceCtrl || state.bestRevealed) return;
   track("best_arrange_click");
 
   const loading = $("#best-loading");
   const poemEl = $("#best-poem");
+  const panel = $("#best-panel");
+
   loading.hidden = false;
   poemEl.textContent = "";
   poemEl.classList.remove("best-poem--visible");
 
   setTimeout(() => {
-    state.tagCtrl.setOrder(state.bestOrder);
+    state.diceCtrl.setOrder(state.bestOrder);
     loading.hidden = true;
     poemEl.textContent = state.bestPoem;
     poemEl.classList.add("best-poem--visible");
+    panel.classList.add("best-panel--open");
+    state.bestRevealed = true;
+
+    const btn = document.querySelector('[data-action="best-arrange"]');
+    if (btn) btn.hidden = true;
+
     track("best_arrange_shown", { poem: state.bestPoem });
   }, BEST_ANIM_MS);
 }
@@ -569,7 +576,6 @@ function startRoll() {
 
   track("roll_start");
   incrementRollCount();
-
   switchScreen("roll");
 
   state.rolled = rollDice();
@@ -599,6 +605,10 @@ async function copyText(text) {
 }
 
 function goPoster() {
+  if (!state.bestRevealed) {
+    showToast("请先显示最佳排列");
+    return;
+  }
   const canvas = $("#poster-canvas");
   renderPoster(canvas, {
     words: state.words,
