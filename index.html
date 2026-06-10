@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="description" content="向宇宙下单 — 一个让你向宇宙提问，并收到一封来自宇宙回信的沉浸式体验。" />
+    <meta name="theme-color" content="#060816" />
+    <meta property="og:title" content="向宇宙下单" />
+    <meta property="og:description" content="宇宙不会替你做决定，但它会把你已经知道的答案，轻轻送回来。" />
+    <meta property="og:type" content="website" />
+    <title>向宇宙下单</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./css/styles.css" />
+  </head>
+  <body>
+    <canvas id="cosmos" aria-hidden="true"></canvas>
+    <div class="vignette" aria-hidden="true"></div>
+
+    <div id="app">
+      <!-- P1 欢迎页 -->
+      <section class="screen screen--active" data-screen="welcome">
+        <div class="screen-content">
+          <p class="brand reveal">向宇宙下单</p>
+          <h1 class="hero reveal" id="welcome-hero">
+            <span class="hero-line">宇宙不会替你做决定</span>
+            <span class="hero-line">但它会把你已经知道的答案</span>
+            <span class="hero-line hero-line--accent">轻轻送回来</span>
+          </h1>
+          <div class="cosmos-reminder reveal" id="cosmos-reminder" hidden>
+            <p class="cosmos-reminder__label">宇宙提醒：</p>
+            <p class="cosmos-reminder__line text-body">不要连续询问同一个问题。</p>
+            <p class="cosmos-reminder__line text-body">答案不会因为焦虑而改变。</p>
+          </div>
+          <div class="actions reveal">
+            <button class="btn btn-primary" type="button" data-action="start">开始向宇宙下单</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- P2 默念问题页 -->
+      <section class="screen" data-screen="meditate">
+        <div class="screen-content">
+          <p class="meditate-text reveal" data-delay="0">最近是不是有一个问题</p>
+          <p class="meditate-text reveal" data-delay="1">反复出现在你的脑海里？</p>
+          <p class="meditate-pause reveal" data-delay="2"></p>
+          <p class="meditate-text meditate-text--soft reveal" data-delay="3">不需要告诉我</p>
+          <p class="meditate-text meditate-text--soft reveal" data-delay="4">只需要在心里默念它</p>
+          <div class="actions reveal" data-delay="5">
+            <button class="btn btn-primary" type="button" data-action="confirm-question">我想好了</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- P3 数字输入页 -->
+      <section class="screen" data-screen="number">
+        <div class="screen-content">
+          <p class="number-prompt reveal">请说出一个突然想到的数字</p>
+          <p class="number-range reveal">1 — 99</p>
+          <p class="number-hint reveal">不要计算 · 不要纠结 · 第一个出现的数字就好</p>
+          <div class="number-input-wrap reveal">
+            <input
+              class="number-input"
+              type="tel"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              maxlength="2"
+              placeholder="—"
+              autocomplete="off"
+              aria-label="输入 1 到 99 之间的数字"
+            />
+          </div>
+          <p class="number-error" hidden>请输入 1 到 99 之间的数字</p>
+          <div class="actions reveal">
+            <button class="btn btn-primary" type="button" data-action="submit-number" disabled>发送给宇宙</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- P4 宇宙回应页 -->
+      <section class="screen" data-screen="loading">
+        <div class="screen-content loading-content">
+          <div class="floating-number" id="floating-number" aria-hidden="true"></div>
+          <p class="loading-text" id="loading-text">正在接收你的信号</p>
+          <div class="loading-particles" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- P5 结果页 -->
+      <section class="screen" data-screen="result">
+        <div class="screen-content result-content">
+          <p class="result-label reveal">宇宙回信</p>
+          <div class="result-block reveal">
+            <p class="result-block-label">一句话真相</p>
+            <p class="result-oneline text-body" id="result-oneline"></p>
+          </div>
+          <div class="result-divider reveal"></div>
+          <div class="result-block reveal">
+            <p class="result-block-label">深度解读</p>
+            <p class="result-interpretation text-body" id="result-interpretation"></p>
+          </div>
+          <div class="result-block reveal">
+            <p class="result-block-label">宇宙关键词</p>
+            <p class="result-keywords text-body" id="result-keywords"></p>
+          </div>
+          <div class="result-block reveal">
+            <p class="result-block-label">今日行动</p>
+            <p class="result-action text-body" id="result-action"></p>
+          </div>
+          <p class="easter-egg-msg" id="easter-egg-msg" hidden></p>
+          <div class="actions actions--result reveal">
+            <button class="btn btn-primary" type="button" data-action="share-poster">🌌 晒出我的宇宙回信</button>
+            <button class="btn btn-secondary" type="button" data-action="invite-friend">🔮 让朋友也问问宇宙</button>
+            <button class="btn btn-ghost" type="button" data-action="retry">重新提问</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- P6 分享海报页 -->
+      <section class="screen" data-screen="poster">
+        <div class="screen-content poster-content">
+          <button class="poster-back reveal" type="button" data-action="back-result" aria-label="返回结果页">← 返回</button>
+          <div class="poster-preview" id="poster-preview">
+            <canvas id="poster-canvas"></canvas>
+          </div>
+          <div class="actions actions--poster">
+            <button class="btn btn-primary btn-block" type="button" data-action="save-poster">保存图片</button>
+            <button class="btn btn-secondary btn-block" type="button" data-action="copy-copy">复制文案</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <p class="toast" id="toast" hidden></p>
+
+    <!-- 分享面板 -->
+    <div class="share-panel" id="share-panel" hidden>
+      <div class="share-panel__backdrop" data-action="close-share"></div>
+      <div class="share-panel__sheet" role="dialog" aria-label="分享">
+        <p class="share-panel__title">发送给</p>
+        <div class="share-panel__options">
+          <button class="share-option" type="button" data-action="share-wechat-friend">
+            <span class="share-option__icon share-option__icon--wechat">💬</span>
+            <span class="share-option__label">微信好友</span>
+          </button>
+          <button class="share-option" type="button" data-action="share-wechat-group">
+            <span class="share-option__icon share-option__icon--group">👥</span>
+            <span class="share-option__label">微信群</span>
+          </button>
+          <button class="share-option" type="button" data-action="share-copy-link">
+            <span class="share-option__icon share-option__icon--link">🔗</span>
+            <span class="share-option__label">复制链接</span>
+          </button>
+        </div>
+        <button class="share-panel__cancel" type="button" data-action="close-share">取消</button>
+      </div>
+    </div>
+
+    <!-- 微信分享引导 -->
+    <div class="wechat-guide" id="wechat-guide" hidden>
+      <div class="wechat-guide__backdrop" data-action="close-wechat-guide"></div>
+      <div class="wechat-guide__content">
+        <div class="wechat-guide__arrow" aria-hidden="true"></div>
+        <p class="wechat-guide__text" id="wechat-guide-text"></p>
+        <button class="btn btn-ghost wechat-guide__btn" type="button" data-action="close-wechat-guide">知道了</button>
+      </div>
+    </div>
+
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>
