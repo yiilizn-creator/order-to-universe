@@ -6,15 +6,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="format-detection" content="telephone=no" />
-    <meta name="description" content="随机六个词，拼出一句意想不到的话。" />
-    <meta name="theme-color" content="#FAFAFA" />
+    <meta name="description" content="随机六个词，组成一句话。" />
+    <meta name="theme-color" content="#FAF8F6" />
     <meta property="og:title" content="时间的诗" />
-    <meta property="og:description" content="随机六个词，拼出一句意想不到的话。" />
+    <meta property="og:description" content="随机六个词，组成一句话。" />
     <meta property="og:type" content="website" />
     <title>时间的诗</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
@@ -26,7 +23,7 @@
           <div class="home-spacer reveal" aria-hidden="true"></div>
           <div class="home-main reveal">
             <h1 class="hero-title">时间的诗</h1>
-            <p class="hero-sub">随机六个词<br />拼出一句意想不到的话</p>
+            <p class="hero-sub">随机六个词<br />组成一句话</p>
           </div>
           <div class="home-bottom reveal">
             <div class="dice-cluster dice-cluster--3" id="home-dice-cluster" aria-hidden="true"></div>
@@ -47,14 +44,16 @@
         <div class="screen-content result-content">
           <div class="result-dice-mini reveal" id="result-dice-row"></div>
 
-          <div class="arrange-core reveal">
+          <div class="best-section reveal">
+            <p class="best-poem" id="best-poem"></p>
+            <p class="best-loading" id="best-loading" hidden>正在寻找最合适的位置…</p>
+          </div>
+
+          <div class="arrange-section reveal">
             <h2 class="module-title">你会怎么排列？</h2>
-            <div class="word-reveal" id="word-reveal" aria-live="polite"></div>
             <div class="tag-list" id="tag-list"></div>
             <p class="custom-preview" id="custom-poem"></p>
-            <button class="btn btn-soft" type="button" data-action="best-arrange">看看最佳排列</button>
-            <p class="best-loading" id="best-loading" hidden>正在寻找最合适的位置…</p>
-            <p class="best-poem" id="best-poem"></p>
+            <button class="btn btn-primary btn-compact" type="button" data-action="best-arrange">最佳排列</button>
           </div>
 
           <div class="actions actions--result reveal">

@@ -22,55 +22,27 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
       cy += lineHeight;
     }
   });
-  return cy;
 }
 
-export function renderPoster(canvas, { words, bestPoem, siteUrl }) {
+export function renderPoster(canvas, { bestPoem }) {
   canvas.width = POSTER_W;
   canvas.height = POSTER_H;
   const ctx = canvas.getContext("2d");
   const w = POSTER_W;
   const h = POSTER_H;
 
-  ctx.fillStyle = "#FAFAFA";
-  ctx.fillRect(0, 0, w, h);
-
-  const glow = ctx.createRadialGradient(w * 0.5, h * 0.3, 0, w * 0.5, h * 0.3, w * 0.55);
-  glow.addColorStop(0, "rgba(217,242,255,0.5)");
-  glow.addColorStop(1, "transparent");
-  ctx.fillStyle = glow;
+  ctx.fillStyle = "#FAF8F6";
   ctx.fillRect(0, 0, w, h);
 
   ctx.textAlign = "center";
-  ctx.font = "500 56px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "#1e293b";
-  ctx.fillText("时间的诗", w / 2, 200);
+  ctx.font = "500 88px 'PingFang SC', 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "#111111";
+  wrapText(ctx, bestPoem, 120, h * 0.38, w - 240, 132);
 
-  ctx.font = "300 32px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(30,41,59,0.55)";
-  ctx.fillText("我掷出了这组词：", w / 2, 320);
-
-  ctx.font = "400 36px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "#1e293b";
-  ctx.fillText(words.join("｜"), w / 2, 400);
-
-  ctx.font = "300 32px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(30,41,59,0.55)";
-  ctx.fillText("它们最终组成：", w / 2, 520);
-
-  ctx.font = "400 52px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "#1e293b";
-  wrapText(ctx, bestPoem, 120, 620, w - 240, 84);
-
-  ctx.font = "300 34px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(30,41,59,0.45)";
-  ctx.fillText("你也来试试", w / 2, h - 280);
-  ctx.fillText("看看你的词语会怎么排列", w / 2, h - 220);
-
-  ctx.font = "300 24px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(30,41,59,0.3)";
-  const url = (siteUrl || window.location.href).replace(/^https?:\/\//, "");
-  ctx.fillText(url, w / 2, h - 80);
+  ctx.font = "400 36px 'PingFang SC', 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "#777777";
+  ctx.fillText("随机六个词", w / 2, h - 200);
+  ctx.fillText("组成一句话", w / 2, h - 140);
 
   return canvas;
 }

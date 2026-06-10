@@ -22,7 +22,6 @@ const state = {
   words: [],
   bestPoem: "",
   bestOrder: [],
-  customPoem: "",
   isRolling: false,
   tagCtrl: null,
 };
@@ -55,37 +54,15 @@ function switchScreen(name) {
   });
 }
 
-function playRollSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [0, 0.15, 0.35, 0.55, 0.75, 0.95].forEach((t) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = 600 + Math.random() * 400;
-      gain.gain.setValueAtTime(0.05, ctx.currentTime + t);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.06);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(ctx.currentTime + t);
-      osc.stop(ctx.currentTime + t + 0.07);
-    });
-  } catch {
-    /* ignore */
+function showBestPoem(animate = true) {
+  const poemEl = $("#best-poem");
+  poemEl.textContent = state.bestPoem;
+  if (animate) {
+    poemEl.classList.remove("best-poem--visible");
+    requestAnimationFrame(() => poemEl.classList.add("best-poem--visible"));
+  } else {
+    poemEl.classList.add("best-poem--visible");
   }
-}
-
-function animateWordReveal(words, container, onDone) {
-  container.innerHTML = "";
-  container.classList.add("word-reveal--active");
-  words.forEach((word, i) => {
-    setTimeout(() => {
-      const chip = document.createElement("span");
-      chip.className = "word-chip";
-      chip.textContent = word;
-      container.appendChild(chip);
-      if (i === words.length - 1) onDone?.();
-    }, i * 280);
-  });
 }
 
 function renderResultContent() {
@@ -93,20 +70,17 @@ function renderResultContent() {
   state.bestPoem = generateBestPoem(state.wordMap);
   state.bestOrder = getBestOrder(state.wordMap, state.words);
 
-  $("#best-poem").textContent = "";
-  $("#best-poem").classList.remove("best-poem--visible");
   $("#best-loading").hidden = true;
+  $("#best-poem").classList.remove("best-poem--visible");
+  $("#best-poem").textContent = "";
 
   renderMiniDice($("#result-dice-row"), state.rolled);
 
-  const revealEl = $("#word-reveal");
-  animateWordReveal(state.words, revealEl, () => {
-    revealEl.classList.remove("word-reveal--active");
-    state.tagCtrl = initTagDrag($("#tag-list"), state.words, (order, dragUsed) => {
-      state.customPoem = composeCustomPoem(order);
-      $("#custom-poem").textContent = state.customPoem;
-      if (dragUsed) track("drag_used");
-    });
+  setTimeout(() => showBestPoem(true), 400);
+
+  state.tagCtrl = initTagDrag($("#tag-list"), state.words, (order, dragUsed) => {
+    $("#custom-poem").textContent = composeCustomPoem(order);
+    if (dragUsed) track("drag_used");
   });
 
   track("words_revealed", { words: state.words });
@@ -119,14 +93,12 @@ function showBestArrangement() {
   const loading = $("#best-loading");
   const poemEl = $("#best-poem");
   loading.hidden = false;
-  poemEl.textContent = "";
   poemEl.classList.remove("best-poem--visible");
 
   setTimeout(() => {
     state.tagCtrl.setOrder(state.bestOrder);
     loading.hidden = true;
-    poemEl.textContent = state.bestPoem;
-    poemEl.classList.add("best-poem--visible");
+    showBestPoem(true);
     track("best_arrange_shown", { poem: state.bestPoem });
   }, BEST_ANIM_MS);
 }
@@ -137,7 +109,6 @@ function startRoll() {
 
   track("roll_start");
   incrementRollCount();
-
   switchScreen("roll");
 
   state.rolled = rollDice();
@@ -145,7 +116,6 @@ function startRoll() {
 
   const stage = $("#roll-dice-stage");
   renderDiceStage(stage, state.rolled);
-  playRollSound();
 
   animateRoll(stage, state.rolled, () => {
     renderResultContent();
@@ -168,11 +138,7 @@ async function copyText(text) {
 
 function goPoster() {
   const canvas = $("#poster-canvas");
-  renderPoster(canvas, {
-    words: state.words,
-    bestPoem: state.bestPoem,
-    siteUrl: SITE_URL,
-  });
+  renderPoster(canvas, { bestPoem: state.bestPoem, siteUrl: SITE_URL });
   getPosterPreviewScale(canvas, $("#poster-preview").clientWidth);
   switchScreen("share");
   track("poster_view");
@@ -214,7 +180,7 @@ function bindActions() {
         track("poster_download");
         break;
       case "copy-share-text":
-        copyText(getShareCopy(state.words, state.bestPoem));
+        copyText(getShareCopy(state.bestPoem));
         track("share_copy");
         break;
       case "close-share":
@@ -226,7 +192,7 @@ function bindActions() {
         $("#share-panel").hidden = true;
         break;
       case "share-copy-text":
-        copyText(getShareCopy(state.words, state.bestPoem));
+        copyText(getShareCopy(state.bestPoem));
         track("share_text_copy");
         $("#share-panel").hidden = true;
         break;
@@ -240,7 +206,7 @@ function init() {
   recordVisit();
   track("page_view", { screen: "home" });
 
-  renderDiceCluster($("#home-dice-cluster"), { count: 3, size: "sm", floating: true });
+  renderDiceCluster($("#home-dice-cluster"), { count: 3, size: "md", floating: true });
 
   document.querySelectorAll(".screen.screen--active .reveal").forEach((el, i) => {
     setTimeout(() => el.classList.add("reveal--visible"), 80 + i * 70);

@@ -46,24 +46,22 @@ function incrementRollCount() {
 
 /* === poem.js === */
 const BEST_TEMPLATES = [
-  ({ color, nature, action, object, emotion }) => {
-    const subject = object === "小猫" ? "小猫" : `那只${object}`;
-    return `${color}${nature}${action}${object}，\n${emotion}的${subject}终于抬起头。`;
-  },
-  ({ color, nature, action, object, time }) =>
-    `${color}${nature}${action}${object}，\n${time}的故事刚刚开始。`,
-  ({ nature, action, color, object, emotion }) =>
-    `${nature}${action}过${color}的${object}，\n${emotion}在角落里发芽。`,
+  ({ nature, action, object, emotion }) =>
+    `${nature}${action}${object}\n${emotion}终于被看见`,
+  ({ color, nature, action, object, emotion }) =>
+    `${color}${nature}${action}${object}\n${emotion}终于被看见`,
+  ({ nature, action, object, emotion, time }) =>
+    `${nature}${action}${object}\n${emotion}在${time}醒来`,
+  ({ color, nature, object, action, emotion }) =>
+    `${color}${nature}停在${object}\n${action}之后是${emotion}`,
+  ({ nature, action, object, emotion }) =>
+    `${nature}悄悄${action}\n${object}记住了${emotion}`,
   ({ color, object, nature, action, emotion }) =>
-    `${color}${object}里，\n${nature}轻轻${action}，${emotion}有了名字。`,
-  ({ time, nature, color, action, object }) =>
-    `${time}的${color}${nature}，\n${action}向${object}，像一句玩笑话。`,
-  ({ emotion, nature, object, action, color }) =>
-    `把${emotion}交给${nature}，\n${action}过${color}的${object}。`,
-  ({ color, nature, object, action, time }) =>
-    `${color}${nature}停在${object}旁，\n${time}悄悄${action}。`,
-  ({ nature, color, action, emotion, object }) =>
-    `${nature}和${color}打了个照面，\n${action}之后，${emotion}住进了${object}。`,
+    `${color}${object}里\n${nature}${action}，${emotion}很轻`,
+  ({ nature, action, object, time, emotion }) =>
+    `${nature}${action}${object}\n${time}的${emotion}有了回应`,
+  ({ color, nature, action, object, emotion }) =>
+    `${color}的${nature}${action}\n${object}与${emotion}相遇`,
 ];
 
 function countChars(text) {
@@ -88,15 +86,15 @@ function generateBestPoem(wordMap) {
   for (const tpl of shuffled) {
     const poem = tpl(vars).trim();
     const len = countChars(poem);
-    if (len >= 18 && len <= 36) return poem;
+    if (len >= 14 && len <= 32) return poem;
   }
 
-  return `${vars.color}${vars.nature}${vars.action}${vars.object}，\n${vars.emotion}的${vars.object}终于抬起头。`;
+  return `${vars.nature}${vars.action}${vars.object}\n${vars.emotion}终于被看见`;
 }
 
 function getBestOrder(wordMap, rolledWords) {
   const v = varsFromMap(wordMap);
-  const ordered = [v.color, v.nature, v.action, v.object, v.emotion, v.time].filter(Boolean);
+  const ordered = [v.nature, v.action, v.object, v.color, v.emotion, v.time].filter(Boolean);
   const unique = [...new Set(ordered)];
   const rest = rolledWords.filter((w) => !unique.includes(w));
   return [...unique, ...rest].slice(0, 6);
@@ -108,8 +106,8 @@ function composeCustomPoem(words) {
   return `${words.slice(0, mid).join("")}\n${words.slice(mid).join("")}`;
 }
 
-function getShareCopy(words, bestPoem) {
-  return `时间的诗\n\n我掷出了这组词：\n${words.join("｜")}\n\n它们最终组成：\n${bestPoem.replace(/\n/g, "")}\n\n你也来试试，看看你的词语会怎么排列`;
+function getShareCopy(bestPoem) {
+  return `${bestPoem.replace(/\n/g, "\n")}\n\n—— 时间的诗\n随机六个词，组成一句话`;
 }
 
 /* === drag.js === */
@@ -206,55 +204,27 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
       cy += lineHeight;
     }
   });
-  return cy;
 }
 
-function renderPoster(canvas, { words, bestPoem, siteUrl }) {
+function renderPoster(canvas, { bestPoem }) {
   canvas.width = POSTER_W;
   canvas.height = POSTER_H;
   const ctx = canvas.getContext("2d");
   const w = POSTER_W;
   const h = POSTER_H;
 
-  ctx.fillStyle = "#FAFAFA";
-  ctx.fillRect(0, 0, w, h);
-
-  const glow = ctx.createRadialGradient(w * 0.5, h * 0.3, 0, w * 0.5, h * 0.3, w * 0.55);
-  glow.addColorStop(0, "rgba(217,242,255,0.5)");
-  glow.addColorStop(1, "transparent");
-  ctx.fillStyle = glow;
+  ctx.fillStyle = "#FAF8F6";
   ctx.fillRect(0, 0, w, h);
 
   ctx.textAlign = "center";
-  ctx.font = "500 56px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "#1e293b";
-  ctx.fillText("时间的诗", w / 2, 200);
+  ctx.font = "500 88px 'PingFang SC', 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "#111111";
+  wrapText(ctx, bestPoem, 120, h * 0.38, w - 240, 132);
 
-  ctx.font = "300 32px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(30,41,59,0.55)";
-  ctx.fillText("我掷出了这组词：", w / 2, 320);
-
-  ctx.font = "400 36px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "#1e293b";
-  ctx.fillText(words.join("｜"), w / 2, 400);
-
-  ctx.font = "300 32px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(30,41,59,0.55)";
-  ctx.fillText("它们最终组成：", w / 2, 520);
-
-  ctx.font = "400 52px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "#1e293b";
-  wrapText(ctx, bestPoem, 120, 620, w - 240, 84);
-
-  ctx.font = "300 34px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(30,41,59,0.45)";
-  ctx.fillText("你也来试试", w / 2, h - 280);
-  ctx.fillText("看看你的词语会怎么排列", w / 2, h - 220);
-
-  ctx.font = "300 24px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(30,41,59,0.3)";
-  const url = (siteUrl || window.location.href).replace(/^https?:\/\//, "");
-  ctx.fillText(url, w / 2, h - 80);
+  ctx.font = "400 36px 'PingFang SC', 'Noto Sans SC', sans-serif";
+  ctx.fillStyle = "#777777";
+  ctx.fillText("随机六个词", w / 2, h - 200);
+  ctx.fillText("组成一句话", w / 2, h - 140);
 
   return canvas;
 }
@@ -282,15 +252,6 @@ const DICE_SETS = [
   { id: "action", label: "动作", words: ["流过", "经过", "停留", "闪烁", "坠落", "消失"] },
 ];
 
-const FACE_TRANSFORMS = [
-  "rotateY(0deg) translateZ(var(--half))",
-  "rotateY(90deg) translateZ(var(--half))",
-  "rotateY(180deg) translateZ(var(--half))",
-  "rotateY(-90deg) translateZ(var(--half))",
-  "rotateX(90deg) translateZ(var(--half))",
-  "rotateX(-90deg) translateZ(var(--half))",
-];
-
 const ROLL_DURATION = 2500;
 
 function rollDice() {
@@ -313,59 +274,59 @@ function wordsToMap(rolled) {
   return map;
 }
 
-function createFace(word, index) {
-  const face = document.createElement("div");
-  face.className = "dice-face";
-  face.style.transform = FACE_TRANSFORMS[index];
-  face.textContent = word;
-  return face;
-}
-
-function createDiceElement(set, options = {}) {
-  const { size = "md", word = null, faceIndex = 0, floating = false, delay = 0 } = options;
+function createDiceTile(set, options = {}) {
+  const {
+    size = "md",
+    word = set.words[0],
+    floating = false,
+    delay = 0,
+    hidden = false,
+  } = options;
 
   const wrap = document.createElement("div");
-  wrap.className = `dice-wrap dice-wrap--${size}`;
+  wrap.className = `dice-tile dice-tile--${size}`;
   if (floating) {
-    wrap.classList.add("dice-wrap--float");
+    wrap.classList.add("dice-tile--float");
     wrap.style.animationDelay = `${delay}s`;
   }
+  if (hidden) wrap.classList.add("dice-tile--pending");
   wrap.dataset.setId = set.id;
 
-  const cube = document.createElement("div");
-  cube.className = "dice-cube";
-  cube.setAttribute("role", "img");
-  cube.setAttribute("aria-label", `${set.label}骰子`);
+  const body = document.createElement("div");
+  body.className = "dice-tile__body";
 
-  set.words.forEach((w, i) => {
-    cube.appendChild(createFace(w, i));
-  });
+  const top = document.createElement("div");
+  top.className = "dice-tile__edge dice-tile__edge--top";
+  top.setAttribute("aria-hidden", "true");
 
-  if (word !== null) {
-    cube.dataset.face = String(faceIndex);
-    cube.style.transform = getStoppedRotation(faceIndex);
-  }
+  const left = document.createElement("div");
+  left.className = "dice-tile__edge dice-tile__edge--left";
+  left.setAttribute("aria-hidden", "true");
 
-  wrap.appendChild(cube);
+  const front = document.createElement("div");
+  front.className = "dice-tile__front";
+  front.textContent = word;
+
+  body.appendChild(top);
+  body.appendChild(left);
+  body.appendChild(front);
+  wrap.appendChild(body);
+  wrap.setAttribute("role", "img");
+  wrap.setAttribute("aria-label", `${set.label}：${word}`);
   return wrap;
 }
 
-function getStoppedRotation(faceIndex) {
-  const rotations = [
-    "rotateX(-12deg) rotateY(18deg)",
-    "rotateX(-12deg) rotateY(-72deg)",
-    "rotateX(-12deg) rotateY(-162deg)",
-    "rotateX(-12deg) rotateY(108deg)",
-    "rotateX(-102deg) rotateY(18deg)",
-    "rotateX(78deg) rotateY(18deg)",
-  ];
-  return rotations[faceIndex] || rotations[0];
+function setTileWord(tile, word) {
+  const front = tile.querySelector(".dice-tile__front");
+  if (front) front.textContent = word;
+  tile.setAttribute("aria-label", word);
 }
 
-function renderDiceCluster(container, { count = 3, size = "sm", floating = true } = {}) {
+function renderDiceCluster(container, { count = 3, size = "md", floating = true } = {}) {
   container.innerHTML = "";
   DICE_SETS.slice(0, count).forEach((set, i) => {
-    container.appendChild(createDiceElement(set, { size, floating, delay: i * 0.4 }));
+    const word = set.words[i % set.words.length];
+    container.appendChild(createDiceTile(set, { size, word, floating, delay: i * 0.45 }));
   });
 }
 
@@ -373,57 +334,53 @@ function renderDiceStage(container, rolled) {
   container.innerHTML = "";
   DICE_SETS.forEach((set, i) => {
     const item = rolled.find((r) => r.setId === set.id);
-    const el = createDiceElement(set, {
-      size: "lg",
-      word: item?.word ?? null,
-      faceIndex: item?.faceIndex ?? 0,
-    });
-    if (i >= 3) {
-      el.classList.add("dice-wrap--pending");
-    }
-    container.appendChild(el);
+    container.appendChild(
+      createDiceTile(set, {
+        size: "lg",
+        word: "…",
+        hidden: i >= 3,
+      })
+    );
   });
 }
 
 function animateRoll(container, rolled, onComplete) {
-  const wraps = [...container.querySelectorAll(".dice-wrap")];
-  const cubes = [...container.querySelectorAll(".dice-cube")];
+  const tiles = [...container.querySelectorAll(".dice-tile")];
+  const bodies = tiles.map((t) => t.querySelector(".dice-tile__body"));
 
-  wraps.forEach((wrap) => {
-    wrap.classList.add("dice-wrap--drop");
-  });
+  tiles.forEach((tile) => tile.classList.add("dice-tile--toss"));
 
   setTimeout(() => {
-    wraps.slice(0, 3).forEach((wrap, i) => {
-      wrap.querySelector(".dice-cube")?.classList.add("dice-cube--spin");
-      wrap.style.animationDelay = `${i * 0.05}s`;
-    });
-  }, 300);
+    bodies.forEach((body) => body?.classList.add("dice-tile__body--spin"));
+  }, 200);
 
   setTimeout(() => {
-    wraps.slice(3).forEach((wrap, i) => {
-      wrap.classList.remove("dice-wrap--pending");
-      wrap.classList.add("dice-wrap--appear");
+    tiles.slice(3).forEach((tile, i) => {
       setTimeout(() => {
-        wrap.querySelector(".dice-cube")?.classList.add("dice-cube--spin");
-      }, i * 120);
+        tile.classList.remove("dice-tile--pending");
+        tile.classList.add("dice-tile--appear");
+      }, i * 100);
     });
-  }, 650);
+  }, 600);
 
-  const stopStart = 1100;
-  const stopGap = 200;
+  const stopStart = 1000;
+  const stopGap = 220;
 
-  cubes.forEach((cube, i) => {
+  tiles.forEach((tile, i) => {
     setTimeout(() => {
-      cube.classList.remove("dice-cube--spin");
-      cube.classList.add("dice-cube--landed");
-      cube.style.transform = getStoppedRotation(rolled[i].faceIndex);
+      const body = tile.querySelector(".dice-tile__body");
+      body?.classList.remove("dice-tile__body--spin");
+      body?.classList.add("dice-tile__body--land");
+      setTileWord(tile, rolled[i].word);
+      tile.classList.remove("dice-tile--toss");
+      tile.classList.add("dice-tile--settled");
     }, stopStart + i * stopGap);
   });
 
   setTimeout(() => {
-    wraps.forEach((wrap) => {
-      wrap.classList.remove("dice-wrap--drop", "dice-wrap--appear");
+    tiles.forEach((tile) => {
+      tile.classList.remove("dice-tile--appear", "dice-tile--settled");
+      tile.querySelector(".dice-tile__body")?.classList.remove("dice-tile__body--land");
     });
     onComplete?.();
   }, ROLL_DURATION);
@@ -431,13 +388,11 @@ function animateRoll(container, rolled, onComplete) {
 
 function renderMiniDice(container, rolled) {
   container.innerHTML = "";
-  rolled.forEach((item) => {
+  rolled.forEach((item, i) => {
     const set = DICE_SETS.find((s) => s.id === item.setId);
-    const el = createDiceElement(set, {
-      size: "xs",
-      word: item.word,
-      faceIndex: item.faceIndex,
-    });
+    const el = createDiceTile(set, { size: "xs", word: item.word });
+    el.style.animationDelay = `${i * 0.08}s`;
+    el.classList.add("dice-tile--mini-in");
     container.appendChild(el);
   });
 }
@@ -454,7 +409,6 @@ const state = {
   words: [],
   bestPoem: "",
   bestOrder: [],
-  customPoem: "",
   isRolling: false,
   tagCtrl: null,
 };
@@ -487,37 +441,15 @@ function switchScreen(name) {
   });
 }
 
-function playRollSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    [0, 0.15, 0.35, 0.55, 0.75, 0.95].forEach((t) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = 600 + Math.random() * 400;
-      gain.gain.setValueAtTime(0.05, ctx.currentTime + t);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.06);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(ctx.currentTime + t);
-      osc.stop(ctx.currentTime + t + 0.07);
-    });
-  } catch {
-    /* ignore */
+function showBestPoem(animate = true) {
+  const poemEl = $("#best-poem");
+  poemEl.textContent = state.bestPoem;
+  if (animate) {
+    poemEl.classList.remove("best-poem--visible");
+    requestAnimationFrame(() => poemEl.classList.add("best-poem--visible"));
+  } else {
+    poemEl.classList.add("best-poem--visible");
   }
-}
-
-function animateWordReveal(words, container, onDone) {
-  container.innerHTML = "";
-  container.classList.add("word-reveal--active");
-  words.forEach((word, i) => {
-    setTimeout(() => {
-      const chip = document.createElement("span");
-      chip.className = "word-chip";
-      chip.textContent = word;
-      container.appendChild(chip);
-      if (i === words.length - 1) onDone?.();
-    }, i * 280);
-  });
 }
 
 function renderResultContent() {
@@ -525,20 +457,17 @@ function renderResultContent() {
   state.bestPoem = generateBestPoem(state.wordMap);
   state.bestOrder = getBestOrder(state.wordMap, state.words);
 
-  $("#best-poem").textContent = "";
-  $("#best-poem").classList.remove("best-poem--visible");
   $("#best-loading").hidden = true;
+  $("#best-poem").classList.remove("best-poem--visible");
+  $("#best-poem").textContent = "";
 
   renderMiniDice($("#result-dice-row"), state.rolled);
 
-  const revealEl = $("#word-reveal");
-  animateWordReveal(state.words, revealEl, () => {
-    revealEl.classList.remove("word-reveal--active");
-    state.tagCtrl = initTagDrag($("#tag-list"), state.words, (order, dragUsed) => {
-      state.customPoem = composeCustomPoem(order);
-      $("#custom-poem").textContent = state.customPoem;
-      if (dragUsed) track("drag_used");
-    });
+  setTimeout(() => showBestPoem(true), 400);
+
+  state.tagCtrl = initTagDrag($("#tag-list"), state.words, (order, dragUsed) => {
+    $("#custom-poem").textContent = composeCustomPoem(order);
+    if (dragUsed) track("drag_used");
   });
 
   track("words_revealed", { words: state.words });
@@ -551,14 +480,12 @@ function showBestArrangement() {
   const loading = $("#best-loading");
   const poemEl = $("#best-poem");
   loading.hidden = false;
-  poemEl.textContent = "";
   poemEl.classList.remove("best-poem--visible");
 
   setTimeout(() => {
     state.tagCtrl.setOrder(state.bestOrder);
     loading.hidden = true;
-    poemEl.textContent = state.bestPoem;
-    poemEl.classList.add("best-poem--visible");
+    showBestPoem(true);
     track("best_arrange_shown", { poem: state.bestPoem });
   }, BEST_ANIM_MS);
 }
@@ -569,7 +496,6 @@ function startRoll() {
 
   track("roll_start");
   incrementRollCount();
-
   switchScreen("roll");
 
   state.rolled = rollDice();
@@ -577,7 +503,6 @@ function startRoll() {
 
   const stage = $("#roll-dice-stage");
   renderDiceStage(stage, state.rolled);
-  playRollSound();
 
   animateRoll(stage, state.rolled, () => {
     renderResultContent();
@@ -600,11 +525,7 @@ async function copyText(text) {
 
 function goPoster() {
   const canvas = $("#poster-canvas");
-  renderPoster(canvas, {
-    words: state.words,
-    bestPoem: state.bestPoem,
-    siteUrl: SITE_URL,
-  });
+  renderPoster(canvas, { bestPoem: state.bestPoem, siteUrl: SITE_URL });
   getPosterPreviewScale(canvas, $("#poster-preview").clientWidth);
   switchScreen("share");
   track("poster_view");
@@ -646,7 +567,7 @@ function bindActions() {
         track("poster_download");
         break;
       case "copy-share-text":
-        copyText(getShareCopy(state.words, state.bestPoem));
+        copyText(getShareCopy(state.bestPoem));
         track("share_copy");
         break;
       case "close-share":
@@ -658,7 +579,7 @@ function bindActions() {
         $("#share-panel").hidden = true;
         break;
       case "share-copy-text":
-        copyText(getShareCopy(state.words, state.bestPoem));
+        copyText(getShareCopy(state.bestPoem));
         track("share_text_copy");
         $("#share-panel").hidden = true;
         break;
@@ -672,7 +593,7 @@ function init() {
   recordVisit();
   track("page_view", { screen: "home" });
 
-  renderDiceCluster($("#home-dice-cluster"), { count: 3, size: "sm", floating: true });
+  renderDiceCluster($("#home-dice-cluster"), { count: 3, size: "md", floating: true });
 
   document.querySelectorAll(".screen.screen--active .reveal").forEach((el, i) => {
     setTimeout(() => el.classList.add("reveal--visible"), 80 + i * 70);
