@@ -1,3 +1,5 @@
+import { playGlassClink, hapticLand } from "./sound.js";
+
 export const DICE_SETS = [
   { id: "emotion", label: "情绪", words: ["等待", "重逢", "拥抱", "遗忘", "想念", "告别"] },
   { id: "time", label: "时间", words: ["今天", "昨天", "黄昏", "深夜", "未来", "清晨"] },
@@ -39,7 +41,7 @@ export function createDiceTile(set, options = {}) {
   } = options;
 
   const tile = document.createElement("div");
-  tile.className = `dice-tile dice-tile--${size}`;
+  tile.className = `dice-tile dice-tile--crystal dice-tile--${size}`;
   if (floating) {
     tile.classList.add("dice-tile--float");
     tile.style.animationDelay = `${delay}s`;
@@ -63,8 +65,17 @@ export function createDiceTile(set, options = {}) {
 
   const front = document.createElement("div");
   front.className = "dice-tile__front";
-  front.textContent = word;
 
+  const glow = document.createElement("div");
+  glow.className = "dice-tile__glow";
+  glow.setAttribute("aria-hidden", "true");
+
+  const text = document.createElement("span");
+  text.className = "dice-tile__text";
+  text.textContent = word;
+
+  front.appendChild(glow);
+  front.appendChild(text);
   body.appendChild(edgeTop);
   body.appendChild(edgeLeft);
   body.appendChild(front);
@@ -75,8 +86,8 @@ export function createDiceTile(set, options = {}) {
 }
 
 export function setTileWord(tile, word) {
-  const front = tile.querySelector(".dice-tile__front");
-  if (front) front.textContent = word;
+  const text = tile.querySelector(".dice-tile__text");
+  if (text) text.textContent = word;
   tile.setAttribute("aria-label", word);
 }
 
@@ -105,9 +116,9 @@ export function animateRoll(container, rolled, onComplete) {
 
   setTimeout(() => {
     tiles.forEach((tile) => {
-      tile.querySelector(".dice-tile__body")?.classList.add("dice-tile__body--spin");
+      tile.querySelector(".dice-tile__body")?.classList.add("dice-tile__body--tumble");
     });
-  }, 200);
+  }, 180);
 
   const stopStart = 900;
   const stopGap = 260;
@@ -115,10 +126,12 @@ export function animateRoll(container, rolled, onComplete) {
   tiles.forEach((tile, i) => {
     setTimeout(() => {
       const body = tile.querySelector(".dice-tile__body");
-      body?.classList.remove("dice-tile__body--spin");
+      body?.classList.remove("dice-tile__body--tumble");
       body?.classList.add("dice-tile__body--land");
       setTileWord(tile, rolled[i].word);
       tile.classList.remove("dice-tile--toss");
+      playGlassClink();
+      hapticLand();
     }, stopStart + i * stopGap);
   });
 

@@ -30,6 +30,15 @@ export function recordVisit() {
   }
 }
 
+export function getObserverNumber() {
+  try {
+    const data = JSON.parse(localStorage.getItem("time-poetry-dice-visit") || "{}");
+    return (data.count || 1) + 3047;
+  } catch {
+    return 3048;
+  }
+}
+
 export function incrementRollCount() {
   const key = "time-poetry-dice-rolls";
   try {

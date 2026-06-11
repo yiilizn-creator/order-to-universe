@@ -6,28 +6,32 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="format-detection" content="telephone=no" />
-    <meta name="description" content="随机六个词，组成一句话。" />
+    <meta name="description" content="六个随机词，拼凑你的诗。" />
     <meta name="theme-color" content="#FAF8F6" />
     <meta property="og:title" content="时间的诗" />
-    <meta property="og:description" content="随机六个词，组成一句话。" />
+    <meta property="og:description" content="六个随机词，拼凑你的诗。" />
     <meta property="og:type" content="website" />
     <title>时间的诗</title>
-    <link rel="stylesheet" href="./css/styles.css" />
+    <link rel="stylesheet" href="./css/styles.css?v=20260610b" />
   </head>
   <body>
+    <div class="ambient" aria-hidden="true"></div>
     <div id="app">
       <!-- 首页 -->
       <section class="screen screen--active" data-screen="home">
         <div class="screen-content home-content">
-          <p class="logo reveal">时间的诗</p>
-          <div class="home-spacer reveal" aria-hidden="true"></div>
-          <div class="home-main reveal">
-            <h1 class="hero-title">时间的诗</h1>
-            <p class="hero-sub">随机六个词<br />组成一句话</p>
+          <div class="home-hero reveal">
+            <h1 class="hero-title">解锁想象力</h1>
+            <p class="hero-sub">六个随机词，拼凑你的诗</p>
           </div>
-          <div class="home-bottom reveal">
+
+          <div class="home-dice reveal">
             <div class="dice-cluster" id="home-dice-cluster" aria-hidden="true"></div>
-            <button class="btn btn-primary" type="button" data-action="start-roll">开始投掷</button>
+          </div>
+
+          <div class="home-actions reveal">
+            <button class="btn btn-primary btn-breathe" type="button" data-action="start-roll">开始投掷</button>
+            <p class="home-hint">解锁今日份朋友圈最佳开场白</p>
           </div>
         </div>
       </section>
@@ -42,28 +46,30 @@
       <!-- 结果页 -->
       <section class="screen" data-screen="result">
         <div class="screen-content result-content">
-          <div class="result-top reveal">
+          <h2 class="result-headline reveal">拖动骰子，释放你的浪漫脑洞</h2>
+
+          <div class="result-dice">
             <div class="dice-row dice-row--draggable" id="result-dice-row"></div>
           </div>
 
-          <div class="arrange-section reveal">
-            <h2 class="module-title">你会怎么排列？</h2>
-            <p class="module-hint">拖动骰子试试看</p>
-            <button class="btn btn-primary" type="button" data-action="best-arrange" id="best-arrange-btn">
-              ✨ 显示最佳排列
-            </button>
+          <div class="best-arrange-wrap">
+            <button class="btn btn-primary btn-best" type="button" data-action="best-arrange" id="best-arrange-btn">显示最佳✨</button>
           </div>
 
-          <div class="best-panel" id="best-panel">
-            <h3 class="best-panel__title">最佳排列</h3>
-            <p class="best-loading" id="best-loading" hidden>正在重新排列词语…</p>
-            <p class="best-poem" id="best-poem"></p>
+          <div class="poem-card result-poem-card" id="poem-card" hidden>
+            <p class="best-loading" id="best-loading" hidden>正在组合诗句…</p>
+            <div class="poem-quote-wrap">
+              <span class="poem-quote-mark poem-quote-mark--open" aria-hidden="true">「</span>
+              <p class="best-poem" id="best-poem"></p>
+              <span class="poem-quote-mark poem-quote-mark--close" aria-hidden="true">」</span>
+            </div>
+            <p class="poem-signature" id="poem-signature"></p>
           </div>
 
-          <div class="actions actions--result reveal">
-            <button class="btn btn-secondary" type="button" data-action="save-poster">保存图片</button>
-            <button class="btn btn-secondary" type="button" data-action="roll-again">重新投掷</button>
-            <button class="btn btn-secondary" type="button" data-action="share-friend">分享给朋友</button>
+          <div class="result-toolbar result-toolbar--ready" id="result-toolbar">
+            <button class="toolbar-btn" type="button" data-action="save-poster">📥 保存诗卡</button>
+            <button class="toolbar-btn" type="button" data-action="roll-again">🔄 再次投掷</button>
+            <button class="toolbar-btn toolbar-btn--share" type="button" data-action="copy-share">💬 复制分享</button>
           </div>
         </div>
       </section>
@@ -75,9 +81,10 @@
           <div class="poster-preview" id="poster-preview">
             <canvas id="poster-canvas"></canvas>
           </div>
+          <p class="share-tagline">六个随机词，拼凑你的诗</p>
           <div class="actions actions--share">
-            <button class="btn btn-primary btn-block" type="button" data-action="download-poster">保存图片</button>
-            <button class="btn btn-secondary btn-block" type="button" data-action="copy-share-text">复制文案</button>
+            <button class="btn btn-primary btn-block" type="button" data-action="download-poster">📥 保存诗卡</button>
+            <button class="btn btn-secondary btn-block" type="button" data-action="copy-share">💬 复制分享</button>
           </div>
         </div>
       </section>
@@ -85,24 +92,6 @@
 
     <p class="toast" id="toast" hidden></p>
 
-    <div class="share-panel" id="share-panel" hidden>
-      <div class="share-panel__backdrop" data-action="close-share"></div>
-      <div class="share-panel__sheet" role="dialog" aria-label="分享">
-        <p class="share-panel__title">分享给朋友</p>
-        <div class="share-panel__options">
-          <button class="share-option" type="button" data-action="share-copy-link">
-            <span class="share-option__icon">🔗</span>
-            <span class="share-option__label">复制链接</span>
-          </button>
-          <button class="share-option" type="button" data-action="share-copy-text">
-            <span class="share-option__icon">📝</span>
-            <span class="share-option__label">复制文案</span>
-          </button>
-        </div>
-        <button class="share-panel__cancel" type="button" data-action="close-share">取消</button>
-      </div>
-    </div>
-
-    <script defer src="./js/app.bundle.js"></script>
+    <script defer src="./js/app.bundle.js?v=20260610b"></script>
   </body>
 </html>

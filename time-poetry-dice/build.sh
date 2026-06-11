@@ -3,7 +3,7 @@ cd "$(dirname "$0")"
 python3 << 'PY'
 import re, pathlib
 root = pathlib.Path("js")
-order = ["analytics.js", "poem.js", "drag.js", "poster.js", "dice.js", "app.js"]
+order = ["analytics.js", "poem.js", "drag.js", "sound.js", "poster.js", "dice.js", "app.js"]
 parts = []
 for name in order:
     src = (root / name).read_text(encoding="utf-8")

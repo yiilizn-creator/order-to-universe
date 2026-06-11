@@ -6,16 +6,15 @@ import {
   animateRoll,
   createResultTile,
 } from "./dice.js";
-import { generateBestPoem, getBestOrder, getShareCopy } from "./poem.js";
+import { composeBestArrangement, getPoemRevealSteps, getShareCopy } from "./poem.js";
 import { initDiceDrag } from "./drag.js";
 import { renderPoster, downloadPoster, getPosterPreviewScale } from "./poster.js";
-import { track, recordVisit, incrementRollCount } from "./analytics.js";
+import { track, recordVisit, incrementRollCount, getObserverNumber } from "./analytics.js";
+import { hapticRoll } from "./sound.js";
 
 const SITE_URL = window.location.href.split("?")[0];
 const PAGE_TRANSITION_MS = 600;
-const BEST_ANIM_MS = 1200;
-const BEST_BTN_LABEL = "✨ 显示最佳排列";
-const BEST_BTN_LOADING = "正在重新排列词语…";
+const POEM_ANIM_MS = 1000;
 
 const state = {
   screen: "home",
@@ -26,7 +25,8 @@ const state = {
   bestOrder: [],
   isRolling: false,
   diceCtrl: null,
-  bestRevealed: false,
+  poemRevealed: false,
+  posterFormat: "square",
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -41,46 +41,102 @@ function showToast(msg) {
   }, 2200);
 }
 
-function switchScreen(name) {
-  if (state.screen === name) return;
+function switchScreen(name, { force = false } = {}) {
+  if (!force && state.screen === name) return;
   const prev = $(`.screen[data-screen="${state.screen}"]`);
   const next = $(`.screen[data-screen="${name}"]`);
+  if (!next) return;
 
   prev?.classList.remove("screen--active");
-  next?.classList.add("screen--active", "screen--entering");
-  setTimeout(() => next?.classList.remove("screen--entering"), PAGE_TRANSITION_MS);
+  next.classList.add("screen--active", "screen--entering");
+  setTimeout(() => next.classList.remove("screen--entering"), PAGE_TRANSITION_MS);
 
   state.screen = name;
-  next?.querySelectorAll(".reveal").forEach((el, i) => {
+  next.querySelectorAll(".reveal").forEach((el, i) => {
     el.classList.remove("reveal--visible");
     setTimeout(() => el.classList.add("reveal--visible"), 80 + i * 60);
   });
 }
 
-function resetBestPanel() {
-  const panel = $("#best-panel");
-  panel.classList.remove("best-panel--open");
-  $("#best-poem").textContent = "";
-  $("#best-poem").classList.remove("best-poem--visible");
-  $("#best-loading").hidden = true;
+function resetPoemCard() {
+  const card = $("#poem-card");
+  const poemEl = $("#best-poem");
+  const signatureEl = $("#poem-signature");
+  const loading = $("#best-loading");
+  const arrangeBtn = $("#best-arrange-btn");
 
-  const btn = $("#best-arrange-btn");
-  if (btn) {
-    btn.hidden = false;
-    btn.disabled = false;
-    btn.textContent = BEST_BTN_LABEL;
+  card?.classList.remove("poem-card--ready");
+  if (card) card.hidden = true;
+  if (poemEl) {
+    poemEl.textContent = "";
+    poemEl.classList.remove("best-poem--visible");
   }
-  state.bestRevealed = false;
+  if (signatureEl) signatureEl.textContent = "";
+  if (loading) loading.hidden = true;
+  if (arrangeBtn) {
+    arrangeBtn.hidden = false;
+    arrangeBtn.disabled = false;
+  }
+  state.poemRevealed = false;
+}
+
+function revealPoem() {
+  if (state.poemRevealed) return;
+
+  const loading = $("#best-loading");
+  const poemEl = $("#best-poem");
+  const card = $("#poem-card");
+  const signatureEl = $("#poem-signature");
+  if (!poemEl || !state.bestPoem) return;
+
+  const observerId = getObserverNumber();
+
+  if (loading) loading.hidden = false;
+  poemEl.textContent = "";
+  poemEl.classList.remove("best-poem--visible");
+  if (signatureEl) signatureEl.textContent = "";
+  if (card) {
+    card.hidden = false;
+    card.classList.add("poem-card--ready");
+  }
+
+  const steps = getPoemRevealSteps(state.bestPoem, state.bestOrder);
+  const stepCount = Math.max(steps.length - 1, 1);
+  const stepMs = POEM_ANIM_MS / stepCount;
+
+  steps.forEach((text, i) => {
+    if (i === 0) return;
+
+    setTimeout(() => {
+      poemEl.textContent = text;
+
+      if (i === steps.length - 1) {
+        if (loading) loading.hidden = true;
+        poemEl.classList.add("best-poem--visible");
+        if (signatureEl) {
+          signatureEl.textContent = `——《时间的诗》第${observerId}位观测者 著`;
+        }
+        const arrangeBtn = $("#best-arrange-btn");
+        if (arrangeBtn) arrangeBtn.hidden = true;
+        state.poemRevealed = true;
+        track("poem_revealed", { poem: state.bestPoem, observerId });
+      }
+    }, stepMs * i);
+  });
 }
 
 function renderResultContent() {
   state.words = state.rolled.map((r) => r.word);
-  state.bestPoem = generateBestPoem(state.wordMap);
-  state.bestOrder = getBestOrder(state.wordMap, state.words);
-  resetBestPanel();
+  const best = composeBestArrangement(state.wordMap);
+  state.bestPoem = best.poem;
+  state.bestOrder = best.order;
+  resetPoemCard();
+
+  const row = $("#result-dice-row");
+  if (!row) throw new Error("Missing #result-dice-row");
 
   state.diceCtrl = initDiceDrag(
-    $("#result-dice-row"),
+    row,
     state.rolled,
     createResultTile,
     (order, dragUsed) => {
@@ -88,7 +144,7 @@ function renderResultContent() {
     }
   );
 
-  $("#result-dice-row").querySelectorAll(".dice-tile").forEach((tile, i) => {
+  row.querySelectorAll(".dice-tile").forEach((tile, i) => {
     tile.classList.add("dice-tile--stagger");
     tile.style.animationDelay = `${i * 120}ms`;
   });
@@ -97,53 +153,58 @@ function renderResultContent() {
 }
 
 function showBestArrangement() {
-  if (!state.diceCtrl || state.bestRevealed) return;
-  track("best_arrange_click");
-
+  if (state.poemRevealed) return;
   const btn = $("#best-arrange-btn");
-  const loading = $("#best-loading");
-  const poemEl = $("#best-poem");
-  const panel = $("#best-panel");
+  if (btn) btn.disabled = true;
+  revealPoem();
+  track("best_arrange_click");
+}
 
-  btn.disabled = true;
-  btn.textContent = BEST_BTN_LOADING;
-  loading.hidden = false;
-  poemEl.textContent = "";
-  poemEl.classList.remove("best-poem--visible");
+function renderPosterPreview() {
+  const canvas = $("#poster-canvas");
+  renderPoster(canvas, {
+    bestPoem: state.bestPoem,
+    format: state.posterFormat,
+    observerId: getObserverNumber(),
+  });
+  getPosterPreviewScale(canvas, $("#poster-preview").clientWidth, "square");
+}
 
-  setTimeout(() => {
-    state.diceCtrl.setOrder(state.bestOrder);
-    loading.hidden = true;
-    poemEl.textContent = state.bestPoem;
-    poemEl.classList.add("best-poem--visible");
-    panel.classList.add("best-panel--open");
-    state.bestRevealed = true;
-    btn.hidden = true;
-
-    track("best_arrange_shown", { poem: state.bestPoem });
-  }, BEST_ANIM_MS);
+function finishRoll() {
+  try {
+    renderResultContent();
+  } catch (err) {
+    console.error("renderResultContent failed:", err);
+  }
+  switchScreen("result", { force: true });
+  state.isRolling = false;
+  track("roll_complete", { words: state.rolled.map((r) => r.word) });
 }
 
 function startRoll() {
   if (state.isRolling) return;
   state.isRolling = true;
 
-  track("roll_start");
-  incrementRollCount();
-  switchScreen("roll");
+  try {
+    track("roll_start");
+    incrementRollCount();
+    hapticRoll();
+    switchScreen("roll");
 
-  state.rolled = rollDice();
-  state.wordMap = wordsToMap(state.rolled);
+    state.rolled = rollDice();
+    state.wordMap = wordsToMap(state.rolled);
 
-  const stage = $("#roll-dice-stage");
-  renderDiceStage(stage, state.rolled);
+    const stage = $("#roll-dice-stage");
+    if (!stage) throw new Error("Missing #roll-dice-stage");
 
-  animateRoll(stage, state.rolled, () => {
-    renderResultContent();
-    switchScreen("result");
+    renderDiceStage(stage, state.rolled);
+    animateRoll(stage, state.rolled, finishRoll);
+  } catch (err) {
+    console.error("startRoll failed:", err);
     state.isRolling = false;
-    track("roll_complete", { words: state.rolled.map((r) => r.word) });
-  });
+    switchScreen("home", { force: true });
+    showToast("投掷出现问题，请重试");
+  }
 }
 
 async function copyText(text) {
@@ -158,15 +219,23 @@ async function copyText(text) {
 }
 
 function goPoster() {
-  if (!state.bestRevealed) {
-    showToast("请先显示最佳排列");
+  if (!state.poemRevealed) {
+    showToast("请先点击「显示最佳✨」");
     return;
   }
-  const canvas = $("#poster-canvas");
-  renderPoster(canvas, { bestPoem: state.bestPoem });
-  getPosterPreviewScale(canvas, $("#poster-preview").clientWidth);
+  renderPosterPreview();
   switchScreen("share");
   track("poster_view");
+}
+
+function copyShare() {
+  if (!state.poemRevealed) {
+    copyText(`${SITE_URL}\n\n六个随机词，拼凑你的诗`);
+    track("share_copy_link_only");
+    return;
+  }
+  copyText(getShareCopy(state.bestPoem));
+  track("share_copy");
 }
 
 function bindActions() {
@@ -192,34 +261,16 @@ function bindActions() {
         goPoster();
         track("save_poster_click");
         break;
-      case "share-friend":
-        $("#share-panel").hidden = false;
-        track("share_click");
+      case "copy-share":
+        copyShare();
         break;
       case "back-result":
         switchScreen("result");
         break;
       case "download-poster":
         downloadPoster($("#poster-canvas"));
-        showToast("图片已保存");
+        showToast("诗卡已保存");
         track("poster_download");
-        break;
-      case "copy-share-text":
-        copyText(getShareCopy(state.bestPoem));
-        track("share_copy");
-        break;
-      case "close-share":
-        $("#share-panel").hidden = true;
-        break;
-      case "share-copy-link":
-        copyText(SITE_URL);
-        track("share_link_copy");
-        $("#share-panel").hidden = true;
-        break;
-      case "share-copy-text":
-        copyText(getShareCopy(state.bestPoem));
-        track("share_text_copy");
-        $("#share-panel").hidden = true;
         break;
       default:
         break;
@@ -231,7 +282,7 @@ function init() {
   recordVisit();
   track("page_view", { screen: "home" });
 
-  renderDiceCluster($("#home-dice-cluster"), { count: 3, size: "md", floating: true });
+  renderDiceCluster($("#home-dice-cluster"), { count: 6, size: "lg", floating: true });
 
   document.querySelectorAll(".screen.screen--active .reveal").forEach((el, i) => {
     setTimeout(() => el.classList.add("reveal--visible"), 100 + i * 80);
